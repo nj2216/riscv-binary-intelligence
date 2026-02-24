@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+pyelftools
+capstone
+python-multipart
