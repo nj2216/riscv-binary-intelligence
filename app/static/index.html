@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>File Uploader</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;margin:24px}
+    .drop{border:2px dashed #888;padding:24px;text-align:center;border-radius:8px;cursor:pointer}
+    .drop.drag{border-color:#06f;background:#f0f8ff}
+    .controls{margin-top:12px;display:flex;gap:8px}
+    .files{margin-top:12px}
+    .file{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #eee;border-radius:6px;margin-bottom:8px}
+    .preview{width:48px;height:48px;object-fit:cover;border-radius:4px;background:#fafafa;border:1px solid #ddd}
+    progress{width:160px;height:12px}
+    button{padding:6px 10px;border-radius:6px;border:1px solid #bbb;background:#fff;cursor:pointer}
+    .result{max-width:520px}
+    .result .meta{font-size:13px;color:#333;margin-bottom:6px}
+    .result table{border-collapse:collapse;font-size:13px;width:100%;max-width:520px}
+    .result th,.result td{border:1px solid #eee;padding:6px;text-align:left}
+    .sections{max-height:140px;overflow:auto;border:1px solid #f0f0f0;background:#fafafa;padding:6px;border-radius:4px}
+    .badge{display:inline-block;padding:2px 6px;border-radius:6px;background:#eef; font-size:12px;margin-right:6px}
+  </style>
+</head>
+<body>
+  <h3>Upload files</h3>
+
+  <div id="drop" class="drop">Click or drag files here</div>
+
+  <div class="controls">
+    <input id="fileInput" type="file" multiple style="display:none" />
+    <button id="selectBtn">Select files</button>
+    <button id="uploadBtn">Upload</button>
+    <button id="clearBtn">Clear</button>
+  </div>
+
+  <div id="files" class="files"></div>
+
+  <script>
+    const drop = document.getElementById('drop');
+    const input = document.getElementById('fileInput');
+    const selectBtn = document.getElementById('selectBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const filesEl = document.getElementById('files');
+
+    let files = [];
+
+    function renderFiles() {
+      filesEl.innerHTML = '';
+      files.forEach((f, i) => {
+        const row = document.createElement('div');
+        row.className = 'file';
+        const preview = document.createElement('img');
+        preview.className = 'preview';
+        preview.alt = '';
+        if (f.type && f.type.startsWith('image/')) {
+          preview.src = URL.createObjectURL(f);
+        } else {
+          preview.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="%23f3f4f6"/><text x="24" y="28" font-size="10" text-anchor="middle" fill="%23888">FILE</text></svg>'
+          );
+        }
+        const meta = document.createElement('div');
+        meta.style.flex = '1';
+        meta.innerHTML = '<strong>' + escapeHtml(f.name) + '</strong><div style="font-size:12px;color:#666">' + formatBytes(f.size) + '</div>';
+        const progress = document.createElement('progress');
+        progress.max = 100;
+        progress.value = 0;
+        progress.dataset.index = i;
+        const result = document.createElement('div');
+        result.style.fontSize = '13px';
+        result.style.color = '#111';
+        result.style.marginLeft = '8px';
+        result.dataset.index = i;
+        result.className = 'result';
+        row.appendChild(preview);
+        row.appendChild(meta);
+        row.appendChild(progress);
+        row.appendChild(result);
+        filesEl.appendChild(row);
+      });
+    }
+
+    function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+    function formatBytes(bytes){ if(bytes<1024) return bytes+' B'; if(bytes<1024*1024) return (bytes/1024).toFixed(1)+' KB'; return (bytes/1024/1024).toFixed(2)+' MB'; }
+
+    function addFiles(list) {
+      for (const f of list) files.push(f);
+      renderFiles();
+    }
+
+    drop.addEventListener('click', ()=> input.click());
+    selectBtn.addEventListener('click', ()=> input.click());
+    input.addEventListener('change', e => addFiles(e.target.files));
+
+    drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag'); });
+    drop.addEventListener('dragleave', ()=> drop.classList.remove('drag'));
+    drop.addEventListener('drop', e => {
+      e.preventDefault();
+      drop.classList.remove('drag');
+      addFiles(e.dataTransfer.files);
+    });
+
+    clearBtn.addEventListener('click', ()=> { files = []; input.value = ''; renderFiles(); });
+
+    uploadBtn.addEventListener('click', () => {
+      if (!files.length) return alert('No files to upload');
+      files.forEach((file, idx) => uploadFile(file, idx));
+    });
+
+    function uploadFile(file, idx) {
+      const xhr = new XMLHttpRequest();
+      const form = new FormData();
+      form.append('file', file, file.name);
+      // adjust endpoint as needed
+      xhr.open('POST', 'http://localhost:8000/analyze', true);
+
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) {
+          const p = Math.round((e.loaded / e.total) * 100);
+          const progress = filesEl.querySelector(`progress[data-index="${idx}"]`);
+          if (progress) progress.value = p;
+        }
+      };
+
+      xhr.onload = () => {
+        const progress = filesEl.querySelector(`progress[data-index="${idx}"]`);
+        const resultEl = filesEl.querySelector(`.result[data-index="${idx}"]`);
+        if (xhr.status >= 200 && xhr.status < 300) {
+          if (progress) progress.value = 100;
+          // Try to parse JSON response and render nicely
+          let parsed = null;
+          try { parsed = JSON.parse(xhr.responseText || 'null'); } catch (err) { parsed = null; }
+          if (resultEl) {
+            resultEl.innerHTML = '';
+            if (!parsed) {
+              resultEl.textContent = xhr.responseText || 'OK';
+            } else {
+              // Metadata
+              if (parsed.metadata) {
+                const metaWrap = document.createElement('div');
+                metaWrap.className = 'meta';
+                const pairs = [];
+                for (const k of Object.keys(parsed.metadata)) {
+                  const v = parsed.metadata[k];
+                  pairs.push('<strong>' + escapeHtml(k) + ':</strong> ' + escapeHtml(String(v)));
+                }
+                metaWrap.innerHTML = pairs.join(' · ');
+                resultEl.appendChild(metaWrap);
+              }
+
+              // Instruction stats
+              if (parsed.instruction_stats) {
+                const s = parsed.instruction_stats;
+                const stats = document.createElement('div');
+                stats.style.fontSize = '13px';
+                stats.style.color = '#333';
+                stats.innerHTML = '<span class="badge">Total: ' + (s.total ?? '-') + '</span>' +
+                                  '<span class="badge">Loads: ' + (s.loads ?? 0) + '</span>' +
+                                  '<span class="badge">Stores: ' + (s.stores ?? 0) + '</span>' +
+                                  '<span class="badge">Branches: ' + (s.branches ?? 0) + '</span>';
+                resultEl.appendChild(stats);
+              }
+
+              // Sections table
+              if (Array.isArray(parsed.sections)) {
+                const head = document.createElement('div');
+                head.style.marginTop = '6px';
+                head.innerHTML = '<strong>Sections</strong>';
+                resultEl.appendChild(head);
+                const sectionsWrap = document.createElement('div');
+                sectionsWrap.className = 'sections';
+                const table = document.createElement('table');
+                const thead = document.createElement('thead');
+                thead.innerHTML = '<tr><th>Name</th><th>Size</th><th>Addr</th></tr>';
+                table.appendChild(thead);
+                const tbody = document.createElement('tbody');
+                parsed.sections.forEach(sec => {
+                  const tr = document.createElement('tr');
+                  const name = document.createElement('td'); name.textContent = sec.name || '(unnamed)';
+                  const size = document.createElement('td'); size.textContent = sec.size ?? '';
+                  const addr = document.createElement('td'); addr.textContent = sec.addr ?? '';
+                  tr.appendChild(name); tr.appendChild(size); tr.appendChild(addr);
+                  tbody.appendChild(tr);
+                });
+                table.appendChild(tbody);
+                sectionsWrap.appendChild(table);
+                resultEl.appendChild(sectionsWrap);
+              }
+
+              // Heuristics
+              if (parsed.heuristics) {
+                const h = parsed.heuristics;
+                const hWrap = document.createElement('div');
+                hWrap.style.marginTop = '6px';
+                hWrap.innerHTML = '<strong>Heuristics</strong>';
+                const list = document.createElement('div');
+                list.style.fontSize = '13px';
+                list.style.color = '#333';
+                list.innerHTML = 'Memory intensity: ' + (h.memory_intensity ?? '-') + ' · Branch density: ' + (h.branch_density ?? '-') + ' · Risk: ' + (h.risk_score ?? '-');
+                hWrap.appendChild(list);
+                resultEl.appendChild(hWrap);
+              }
+
+              // Recommendations
+              if (Array.isArray(parsed.recommendations) && parsed.recommendations.length) {
+                const rWrap = document.createElement('div');
+                rWrap.style.marginTop = '6px';
+                rWrap.innerHTML = '<strong>Recommendations</strong>';
+                const ul = document.createElement('ul');
+                parsed.recommendations.forEach(rec => {
+                  const li = document.createElement('li'); li.textContent = typeof rec === 'string' ? rec : JSON.stringify(rec);
+                  ul.appendChild(li);
+                });
+                rWrap.appendChild(ul);
+                resultEl.appendChild(rWrap);
+              }
+
+            }
+          }
+        } else {
+          if (progress) { progress.value = 0; progress.style.background = '#fdd'; }
+          const errText = xhr.responseText || `Status ${xhr.status}`;
+          if (resultEl) resultEl.textContent = 'Error: ' + errText;
+          console.error('Upload failed', xhr.status, xhr.responseText);
+        }
+      };
+
+      xhr.onerror = () => console.error('Upload error');
+      xhr.send(form);
+    }
+  </script>
+</body>
+</html>

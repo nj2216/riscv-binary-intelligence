@@ -12,10 +12,18 @@ class BinaryReport:
         self.recommendations: List[str] = []
 
     def to_dict(self):
+        total = self.instruction_stats.get("total", 1)
+
+        percentages = {}
+        for k, v in self.instruction_stats.items():
+            if k != "total":
+                percentages[k] = round(v / total * 100, 2)
+
         return {
             "metadata": self.metadata,
             "sections": self.sections,
             "instruction_stats": self.instruction_stats,
+            "instruction_percentages": percentages,
             "isa_extensions": self.isa_extensions,
             "heuristics": self.heuristics,
             "recommendations": self.recommendations,

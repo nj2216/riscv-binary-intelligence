@@ -1,0 +1,39 @@
+<h1>RISC-V Binary Intelligence</h1>
+
+<input type="file" id="fileInput">
+<button onclick="upload()">Analyze</button>
+
+<div id="output"></div>
+<script>
+async function upload() {
+    const file = document.getElementById("fileInput").files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/analyze", {
+        method: "POST",
+        body: formData
+    });
+
+    const data = await response.json();
+    render(data);
+}
+
+function render(data) {
+    let html = "";
+
+    html += "<h2>Metadata</h2>";
+    html += "<pre>" + JSON.stringify(data.metadata, null, 2) + "</pre>";
+
+    html += "<h2>Instruction Stats</h2>";
+    html += "<pre>" + JSON.stringify(data.instruction_stats, null, 2) + "</pre>";
+
+    html += "<h2>ISA Extensions</h2>";
+    html += "<pre>" + JSON.stringify(data.isa_extensions, null, 2) + "</pre>";
+
+    html += "<h2>Performance Heuristics</h2>";
+    html += "<pre>" + JSON.stringify(data.heuristics, null, 2) + "</pre>";
+
+    document.getElementById("output").innerHTML = html;
+}
+</script>
