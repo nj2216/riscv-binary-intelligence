@@ -17,7 +17,6 @@
     <div class="container">
       <a class="navbar-brand" href="/">RISC-V Binary Intelligence</a>
       <div>
-        <button class="btn btn-outline-secondary btn-sm me-2" id="backBtn">New Session</button>
         <button class="btn btn-outline-secondary btn-sm me-2" id="copyBtn">Copy JSON</button>
         <button class="btn btn-outline-secondary btn-sm me-2" id="downloadBtn">Download JSON</button>
         <button class="btn btn-outline-secondary btn-sm" id="rawBtn">Toggle Raw JSON</button>
@@ -69,17 +68,21 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    const dataStr = sessionStorage.getItem('rbi_result');
-    if (!dataStr) {
-      document.getElementById('content').innerHTML = '<div class="card"><p>No result found in this session. Click "New Session" to upload a file.</p></div>';
+    // Extract id from path and fetch report from the server.
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const rid = pathParts[pathParts.length - 1];
+    if (!rid) {
+      document.getElementById('content').innerHTML = '<div class="card"><p>Missing result id in URL.</p></div>';
     } else {
-      let data = null;
-      try { data = JSON.parse(dataStr); } catch(e){ data = null; }
-      if (!data) {
-        document.getElementById('content').innerHTML = '<div class="card"><p>Invalid result data.</p></div>';
-      } else {
-        // Metadata
-        const meta = data.metadata || {};
+      fetch('/api/result/' + encodeURIComponent(rid)).then(async resp => {
+          if (!resp.ok) {
+            const txt = await resp.text();
+            document.getElementById('content').innerHTML = '<div class="card"><p>Could not retrieve result: ' + (txt || resp.statusText) + '</p></div>';
+            return;
+          }
+          const data = await resp.json();
+          // Metadata
+          const meta = data.metadata || {};
         const metaParts = [];
         for (const k of ['arch','arch_string','entry_point','bits','endianness']) {
           if (meta[k] !== undefined) metaParts.push('<strong>'+k+':</strong> ' + escapeHtml(String(meta[k])));
@@ -128,36 +131,32 @@
           pctWrap.appendChild(label); pctWrap.appendChild(bar);
         }
 
-        // Raw JSON
-        document.getElementById('rawPre').textContent = JSON.stringify(data, null, 2);
-      }
+          // Raw JSON
+          document.getElementById('rawPre').textContent = JSON.stringify(data, null, 2);
+
+          // make copy/download/raw buttons use the fetched data
+          const jsonStr = JSON.stringify(data, null, 2);
+          document.getElementById('copyBtn').addEventListener('click', async () => {
+            try { await navigator.clipboard.writeText(jsonStr); alert('Report JSON copied to clipboard'); } catch (e) { alert('Copy failed'); }
+          });
+          document.getElementById('downloadBtn').addEventListener('click', () => {
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'report.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+          });
+          document.getElementById('rawBtn').addEventListener('click', () => {
+            const el = document.getElementById('raw');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+          });
+
+        }).catch(err => {
+          console.error(err);
+          document.getElementById('content').innerHTML = '<div class="card"><p>Error fetching result.</p></div>';
+        });
     }
 
-    document.getElementById('backBtn').addEventListener('click', () => { sessionStorage.removeItem('rbi_result'); location.href = '/static/gpt.html'; });
-    document.getElementById('rawBtn').addEventListener('click', () => { const el = document.getElementById('raw'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; });
 
-    document.getElementById('copyBtn').addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(sessionStorage.getItem('rbi_result') || '');
-        alert('Report JSON copied to clipboard');
-      } catch (e) {
-        console.error('Copy failed', e);
-        alert('Copy failed');
-      }
-    });
 
-    document.getElementById('downloadBtn').addEventListener('click', () => {
-      const data = sessionStorage.getItem('rbi_result') || '{}';
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'report.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    });
 
     function escapeHtml(s){ return s.replace(/[&<>"]+/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c] || c); }
   </script>

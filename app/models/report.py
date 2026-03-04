@@ -10,6 +10,7 @@ class BinaryReport:
         self.isa_extensions: List[str] = []
         self.heuristics: Dict[str, Any] = {}
         self.recommendations: List[str] = []
+        self.instruction_summary: List[str] = []
 
     def to_dict(self):
         total = self.instruction_stats.get("total", 1)
@@ -27,4 +28,5 @@ class BinaryReport:
             "isa_extensions": self.isa_extensions,
             "heuristics": self.heuristics,
             "recommendations": self.recommendations,
+            "instruction_summary": self.instruction_summary,
         }

@@ -118,96 +118,17 @@
         const resultEl = filesEl.querySelector(`.result[data-index="${idx}"]`);
         if (xhr.status >= 200 && xhr.status < 300) {
           if (progress) progress.value = 100;
-          // Try to parse JSON response and render nicely
+          // Try to parse JSON response and navigate to result route
           let parsed = null;
           try { parsed = JSON.parse(xhr.responseText || 'null'); } catch (err) { parsed = null; }
-          if (resultEl) {
-            resultEl.innerHTML = '';
-            if (!parsed) {
-              resultEl.textContent = xhr.responseText || 'OK';
-            } else {
-              // Metadata
-              if (parsed.metadata) {
-                const metaWrap = document.createElement('div');
-                metaWrap.className = 'meta';
-                const pairs = [];
-                for (const k of Object.keys(parsed.metadata)) {
-                  const v = parsed.metadata[k];
-                  pairs.push('<strong>' + escapeHtml(k) + ':</strong> ' + escapeHtml(String(v)));
-                }
-                metaWrap.innerHTML = pairs.join(' · ');
-                resultEl.appendChild(metaWrap);
-              }
-
-              // Instruction stats
-              if (parsed.instruction_stats) {
-                const s = parsed.instruction_stats;
-                const stats = document.createElement('div');
-                stats.style.fontSize = '13px';
-                stats.style.color = '#333';
-                stats.innerHTML = '<span class="badge">Total: ' + (s.total ?? '-') + '</span>' +
-                                  '<span class="badge">Loads: ' + (s.loads ?? 0) + '</span>' +
-                                  '<span class="badge">Stores: ' + (s.stores ?? 0) + '</span>' +
-                                  '<span class="badge">Branches: ' + (s.branches ?? 0) + '</span>';
-                resultEl.appendChild(stats);
-              }
-
-              // Sections table
-              if (Array.isArray(parsed.sections)) {
-                const head = document.createElement('div');
-                head.style.marginTop = '6px';
-                head.innerHTML = '<strong>Sections</strong>';
-                resultEl.appendChild(head);
-                const sectionsWrap = document.createElement('div');
-                sectionsWrap.className = 'sections';
-                const table = document.createElement('table');
-                const thead = document.createElement('thead');
-                thead.innerHTML = '<tr><th>Name</th><th>Size</th><th>Addr</th></tr>';
-                table.appendChild(thead);
-                const tbody = document.createElement('tbody');
-                parsed.sections.forEach(sec => {
-                  const tr = document.createElement('tr');
-                  const name = document.createElement('td'); name.textContent = sec.name || '(unnamed)';
-                  const size = document.createElement('td'); size.textContent = sec.size ?? '';
-                  const addr = document.createElement('td'); addr.textContent = sec.addr ?? '';
-                  tr.appendChild(name); tr.appendChild(size); tr.appendChild(addr);
-                  tbody.appendChild(tr);
-                });
-                table.appendChild(tbody);
-                sectionsWrap.appendChild(table);
-                resultEl.appendChild(sectionsWrap);
-              }
-
-              // Heuristics
-              if (parsed.heuristics) {
-                const h = parsed.heuristics;
-                const hWrap = document.createElement('div');
-                hWrap.style.marginTop = '6px';
-                hWrap.innerHTML = '<strong>Heuristics</strong>';
-                const list = document.createElement('div');
-                list.style.fontSize = '13px';
-                list.style.color = '#333';
-                list.innerHTML = 'Memory intensity: ' + (h.memory_intensity ?? '-') + ' · Branch density: ' + (h.branch_density ?? '-') + ' · Risk: ' + (h.risk_score ?? '-');
-                hWrap.appendChild(list);
-                resultEl.appendChild(hWrap);
-              }
-
-              // Recommendations
-              if (Array.isArray(parsed.recommendations) && parsed.recommendations.length) {
-                const rWrap = document.createElement('div');
-                rWrap.style.marginTop = '6px';
-                rWrap.innerHTML = '<strong>Recommendations</strong>';
-                const ul = document.createElement('ul');
-                parsed.recommendations.forEach(rec => {
-                  const li = document.createElement('li'); li.textContent = typeof rec === 'string' ? rec : JSON.stringify(rec);
-                  ul.appendChild(li);
-                });
-                rWrap.appendChild(ul);
-                resultEl.appendChild(rWrap);
-              }
-
-            }
+          if (parsed && parsed.id) {
+            // navigate to route-based result page
+            window.location.href = '/result/' + parsed.id;
+            return;
           }
+          // fallback: show raw response
+          const resultEl = filesEl.querySelector(`.result[data-index="${idx}"]`);
+          if (resultEl) resultEl.textContent = xhr.responseText || 'OK';
         } else {
           if (progress) { progress.value = 0; progress.style.background = '#fdd'; }
           const errText = xhr.responseText || `Status ${xhr.status}`;
