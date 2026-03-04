@@ -77,6 +77,26 @@ These cover the API server and binary parsing/disassembly needs.
 - Add a `Makefile` or a set of `scripts/` commands for common tasks (`start`, `lint`, `test`, `build-image`).
 - Add a CONTRIBUTING.md with development setup and testing instructions.
 
+## Debugging and UI testing
+
+For quick UI testing you can POST a complete report JSON to the debug endpoint which will store the report and return a temporary id you can open in the browser:
+
+PowerShell example (file `sample_report.json` in project root):
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:8000/api/debug/store_result -Method POST -ContentType 'application/json' -InFile 'sample_report.json'
+```
+
+curl example (POSIX):
+
+```bash
+curl -s -X POST http://localhost:8000/api/debug/store_result -H "Content-Type: application/json" -d @sample_report.json
+```
+
+The endpoint returns a JSON with `id` and `url`; open `/result/{id}` in your browser to view the redesigned result page with that report.
+
+By default the server removes stored reports after the first fetch to avoid accumulating sensitive data; set the environment variable `ONE_TIME_FETCH=0` to keep reports until server restart.
+
 ## Next steps I can take
 
 - Pin dependency versions and convert `requirements.txt` into `requirements-dev.txt` + pinned `requirements.txt`.

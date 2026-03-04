@@ -11,6 +11,10 @@ class BinaryReport:
         self.heuristics: Dict[str, Any] = {}
         self.recommendations: List[str] = []
         self.instruction_summary: List[str] = []
+        self.pseudocode: List[str] = []
+        self.cfg: Dict[str, Any] = {}  # control flow graph: nodes and edges
+        self.instruction_hotspots: Dict[str, Any] = {}  # instruction frequency heatmap data
+        self.function_analysis: Dict[str, Any] = {}  # detected functions, boundaries, call graph
 
     def to_dict(self):
         total = self.instruction_stats.get("total", 1)
@@ -29,4 +33,8 @@ class BinaryReport:
             "heuristics": self.heuristics,
             "recommendations": self.recommendations,
             "instruction_summary": self.instruction_summary,
+            "pseudocode": self.pseudocode,
+            "cfg": self.cfg,
+            "instruction_hotspots": self.instruction_hotspots,
+            "function_analysis": self.function_analysis,
         }

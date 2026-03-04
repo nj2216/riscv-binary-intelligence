@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "arch": "riscv",
+    "entry_point": "0x1000",
+    "bits": 64
+  },
+  "sections": [
+    {
+      "name": ".text",
+      "size": 512,
+      "addr": "0x1000"
+    },
+    {
+      "name": ".data",
+      "size": 256,
+      "addr": "0x2000"
+    }
+  ],
+  "instruction_stats": {
+    "total": 6,
+    "loads": 1,
+    "stores": 1,
+    "branches": 1,
+    "arithmetic": 3,
+    "mul_div": 1
+  },
+  "instruction_percentages": {
+    "loads": 16.67,
+    "stores": 16.67,
+    "branches": 16.67,
+    "arithmetic": 50.0,
+    "mul_div": 16.67
+  },
+  "isa_extensions": [],
+  "heuristics": {
+    "memory_intensity": 0.3333333333333333,
+    "branch_density": 0.16666666666666666,
+    "compute_intensity": 0.6666666666666667,
+    "risk_score": 0.233
+  },
+  "recommendations": [
+    "Low memory intensity: compute-bound; consider algorithmic or hardware optimizations."
+  ],
+  "instruction_summary": [
+    "Total instructions: 6",
+    "Largest section: .text (size=512)",
+    "Memory intensity: 0.333 (loads+stores 2 = 33.3%)",
+    "Branch density: 0.167 (branches 1 = 16.7%)",
+    "Compute intensity: 0.667 (arithmetic 3, mul/div 1)",
+    "Risk score: 0.233",
+    "Top instruction types: arithmetic (3), loads (1), stores (1)"
+  ],
+  "pseudocode": [
+    "Entry point: 0x1000",
+    "0x1000: x1 = x0 + 4",
+    "0x1004: x2 = MEM[0(x1)]",
+    "0x1008: MEM[4(x1)] = x2",
+    "0x100c: IF x1 == x2 THEN GOTO 0x1100",
+    "0x1010: x0 = RETURN_ADDR; GOTO 0x1200",
+    "0x1014: x3 = x1 OP x2"
+  ]
+}
