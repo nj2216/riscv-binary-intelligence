@@ -312,6 +312,19 @@
 
     .pills-row { display: flex; flex-wrap: wrap; gap: 6px; }
 
+    /* ── Stat boxes ── */
+    .stat-box {
+      padding: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    .stat-box:hover {
+      border-color: var(--accent);
+      background: var(--surface3);
+    }
+
     /* ── Bar rows ── */
     .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
     .bar-label {
@@ -829,6 +842,32 @@
         const p = document.createElement('span'); p.className = 'pill'; p.textContent = k + ': ' + v;
         pillsEl.appendChild(p);
       });
+      
+      // Add architecture stats after quick stats
+      const archDiv = document.createElement('div');
+      archDiv.style.marginTop = '20px';
+      archDiv.innerHTML = `
+        <div class="sec-title" style="margin-bottom:12px;">Architecture</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
+          ${data.metadata?.arch ? `<div class="stat-box">
+            <div style="color:var(--text-dim);font-size:12px;margin-bottom:4px;">Architecture</div>
+            <div style="font-weight:500;color:var(--accent);">${esc(String(data.metadata.arch))}</div>
+          </div>` : ''}
+          ${data.metadata?.bits ? `<div class="stat-box">
+            <div style="color:var(--text-dim);font-size:12px;margin-bottom:4px;">Bits</div>
+            <div style="font-weight:500;color:var(--accent);">${data.metadata.bits}-bit</div>
+          </div>` : ''}
+          ${data.metadata?.endianness ? `<div class="stat-box">
+            <div style="color:var(--text-dim);font-size:12px;margin-bottom:4px;">Endianness</div>
+            <div style="font-weight:500;color:var(--accent);">${esc(String(data.metadata.endianness))}</div>
+          </div>` : ''}
+          ${data.isa_extensions?.length ? `<div class="stat-box">
+            <div style="color:var(--text-dim);font-size:12px;margin-bottom:4px;">Extensions</div>
+            <div style="font-weight:500;color:var(--accent);">${data.isa_extensions.join(', ')}</div>
+          </div>` : ''}
+        </div>
+      `;
+      pillsEl.parentElement.insertAdjacentElement('afterend', archDiv);
 
       // Overview: summary
       const ins = data.instruction_summary || [];
