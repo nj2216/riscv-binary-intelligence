@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RISC-V Binary Intelligence — Result</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root{
+      --muted:#6c757d;
+      --card-bg:#fff;
+      --body-bg:#f3f6fb;
+      --body-text:#222;
+      --border-color:#dee2e6;
+      --nav-bg:#fff;
+      --card-border:#dee2e6;
+      --table-bg:#fff;
+      --table-border:#dee2e6;
+      --input-bg:#fff;
+      --input-text:#222;
+      --input-border:#dee2e6;
+      --risk-high-bg:linear-gradient(90deg,#fff1f0,#ffe5e5);
+      --risk-med-bg:linear-gradient(90deg,#fffaf0,#fff7e6);
+      --risk-low-bg:linear-gradient(90deg,#f0fff4,#e9fff1);
+      --raw-json-bg:#0d1117;
+      --raw-json-text:#c9d1d9
+    }
+    html.dark-mode {
+      --muted:#9ca3af;
+      --card-bg:#1f2937;
+      --body-bg:#111827;
+      --body-text:#e5e7eb;
+      --border-color:#374151;
+      --nav-bg:#1f2937;
+      --card-border:#374151;
+      --table-bg:#1f2937;
+      --table-border:#374151;
+      --input-bg:#2d3748;
+      --input-text:#e5e7eb;
+      --input-border:#374151;
+      --risk-high-bg:linear-gradient(90deg,#522d26,#3d1f1b);
+      --risk-med-bg:linear-gradient(90deg,#54422c,#3d2d1a);
+      --risk-low-bg:linear-gradient(90deg,#225d3d,#1a3d2e);
+      --raw-json-bg:#0d1117;
+      --raw-json-text:#c9d1d9
+    }
+    body{background:var(--body-bg);color:var(--body-text);transition:background 0.3s, color 0.3s}
+    .navbar{background-color:var(--nav-bg) !important;border-color:var(--border-color) !important}
+    .card{background:var(--card-bg);border-color:var(--card-border);color:var(--body-text)}
+    .form-control{background:var(--input-bg);color:var(--input-text);border-color:var(--input-border)}
+    .form-control:focus{background:var(--input-bg);color:var(--input-text);border-color:var(--input-border)}
+    .table{background:var(--table-bg);color:var(--body-text)}
+    .table th, .table td{border-color:var(--table-border)}
+    .stat-card{min-height:84px}
+    .stat-value{font-size:1.45rem;font-weight:600}
+    .stat-key{color:var(--muted);font-size:0.85rem}
+    .risk-high{background:var(--risk-high-bg);border-left:4px solid #e55353}
+    .risk-med{background:var(--risk-med-bg);border-left:4px solid #f6c84c}
+    .risk-low{background:var(--risk-low-bg);border-left:4px solid #28a745}
+    .sparkline{width:120px;height:28px}
+    .legend-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.04)}
+    .legend-item{display:inline-flex;align-items:center;gap:6px;margin-right:10px;font-size:0.8rem;color:var(--muted)}
+    .key-pill{font-size:0.75rem;padding:.25rem .5rem;border-radius:999px;background:linear-gradient(180deg,#f6f9ff,#eef);border:1px solid rgba(13,110,253,0.06)}
+    html.dark-mode .key-pill{background:linear-gradient(180deg,#2d3748,#374151);border:1px solid rgba(229,231,235,0.1)}
+    .bar{height:12px;background:#e9ecef;border-radius:6px;overflow:hidden}
+    html.dark-mode .bar{background:#374151}
+    .bar > i{display:block;height:100%;background:#0d6efd}
+    .small-muted{color:var(--muted);font-size:0.85rem}
+    .summary-list{margin:0;padding-left:1.1rem}
+    .section-table td, .section-table th{vertical-align:middle}
+    pre.raw-json{max-height:320px;overflow:auto;background:var(--raw-json-bg);color:var(--raw-json-text);padding:12px;border-radius:6px}
+    .btn-outline-secondary{color:var(--body-text);border-color:var(--muted)}
+    html.dark-mode .btn-outline-secondary:hover{background:var(--muted);color:var(--body-bg)}
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-light bg-white border-bottom mb-3" id="navbar">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">RISC-V Binary Intelligence</a>
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-secondary btn-sm" id="darkModeBtn" title="Toggle dark mode">🌙</button>
+        <button class="btn btn-outline-success btn-sm" id="executeBtn" title="Run simulator">▶ Execute</button>
+        <button class="btn btn-outline-secondary btn-sm" id="copyBtn">Copy JSON</button>
+        <button class="btn btn-outline-secondary btn-sm" id="downloadBtn">Download JSON</button>
+        <button class="btn btn-outline-primary btn-sm" id="exportHtmlBtn">Export as HTML</button>
+        <button class="btn btn-outline-secondary btn-sm" id="rawBtn">Toggle Raw JSON</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div id="content">
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card mb-3">
+            <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div>
+                <h5 class="mb-1">Result Overview</h5>
+                <div class="small-muted">Quick view of the most important metrics to prioritize review.</div>
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <div class="stat-card card p-2 shadow-sm">
+                  <div class="stat-key">Total Instructions</div>
+                  <div id="cardTotal" class="stat-value">-</div>
+                </div>
+                <div class="stat-card card p-2 shadow-sm">
+                  <div class="stat-key">Memory intensity (loads+stores %)</div>
+                  <div class="d-flex align-items-center gap-2"><div id="cardMemory" class="stat-value">-</div><svg id="sparkMemory" class="sparkline" aria-hidden></svg></div>
+                </div>
+                <div class="stat-card card p-2 shadow-sm">
+                  <div class="stat-key">Branch density (branches %)</div>
+                  <div class="d-flex align-items-center gap-2"><div id="cardBranch" class="stat-value">-</div><svg id="sparkBranch" class="sparkline" aria-hidden></svg></div>
+                </div>
+                <div class="stat-card card p-2 shadow-sm" id="riskCard">
+                  <div class="stat-key">Risk score (0–1)</div>
+                  <div class="d-flex align-items-center gap-2"><div id="cardRisk" class="stat-value">-</div><svg id="sparkRisk" class="sparkline" aria-hidden></svg></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-8">
+          <div class="card mb-3">
+            <div class="card-body">
+              <h5 class="card-title">Instruction Summary</h5>
+              <div id="instrSummaryArea" class="mb-2"></div>
+
+              <h6 class="mt-3">Instruction Stats</h6>
+              <div id="stats" class="d-flex gap-2 flex-wrap"></div>
+
+              <h6 class="mt-3">Instruction Percentages</h6>
+              <div id="percentages" class="mb-2"></div>
+
+              <h6 class="mt-3">Sections</h6>
+              <div class="table-responsive" style="max-height:320px;overflow:auto">
+                <table class="table table-sm section-table"><thead><tr><th>Name</th><th>Size</th><th>Addr</th><th>Notes</th></tr></thead><tbody id="sectionsTbody"></tbody></table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-3">
+            <div class="card-body">
+              <h5 class="card-title">Pseudocode (approx.)</h5>
+              <div class="mb-2">
+                <input type="text" class="form-control form-control-sm" id="pseudocodeFilter" placeholder="Filter pseudocode by address or keyword..." />
+              </div>
+              <div id="pseudocode" style="max-height:220px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; font-size:0.9rem;" class="small-muted"></div>
+              <hr/>
+              <h5 class="card-title">Instructions (top entries)</h5>
+              <div class="mb-2">
+                <input type="text" class="form-control form-control-sm" id="instrFilter" placeholder="Filter by mnemonic or operand..." />
+              </div>
+              <div id="instrList" class="small-muted" style="max-height:220px;overflow:auto"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div id="heuristicsCard" class="card mb-3">
+            <div class="card-body">
+              <h6>Heuristics</h6>
+              <div class="small-muted">Quick heuristic indicators to prioritize investigation.</div>
+              <div class="mt-2 d-flex flex-wrap align-items-center" id="legend">
+                <div class="legend-item"><span class="legend-dot" style="background:#e55353"></span>High risk</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#f6c84c"></span>Medium risk</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#28a745"></span>Low risk</div>
+                <div class="legend-item ms-3"><span class="legend-dot" style="background:#0d6efd"></span>Instruction %</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#6f42c1"></span>Branch %</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#e55353"></span>Heuristics values</div>
+              </div>
+              <div id="heuristics" class="small-muted mt-2"></div>
+              <div class="mt-2" id="heurBars"></div>
+            </div>
+          </div>
+
+          <div class="card mb-3">
+            <div class="card-body">
+              <h6>Recommendations</h6>
+              <div id="recs" class="small-muted">(none)</div>
+            </div>
+          </div>
+
+          <div class="card mb-3">
+            <div class="card-body">
+              <h6>Quick Links</h6>
+              <div class="d-grid gap-2">
+                <a id="downloadReport" class="btn btn-outline-primary btn-sm" href="#">Open JSON</a>
+                <a id="openRaw" class="btn btn-outline-secondary btn-sm" href="#">Show raw JSON</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="card-title">Control Flow Graph</h5>
+          <div class="small-muted mb-2" id="cfgStats"></div>
+          <div id="cfgContainer" style="max-height:400px;overflow:auto;border:1px solid var(--card-border);border-radius:6px;background:var(--table-bg);padding:12px;">
+            <div class="small-muted">Loading control flow graph...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="card-title">Instruction Hotspot Heatmap</h5>
+          <div class="small-muted mb-2" id="hotspotStats"></div>
+          <div id="hotspotContainer" style="display:grid;gap:8px;">
+            <div class="small-muted">Loading heatmap...</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="executionCard" class="card mt-3" style="display:none">
+        <div class="card-body">
+          <h5 class="card-title">Execution Results <span id="execStatus" class="badge bg-success ms-2"></span></h5>
+          <div class="small-muted mb-3" id="execStats"></div>
+          
+          <div class="row g-3">
+            <div class="col-md-6">
+              <h6>Execution Summary</h6>
+              <div class="small">
+                <div>Instructions Executed: <strong id="execInstrCount">-</strong></div>
+                <div>Cycles (estimated): <strong id="execCycles">-</strong></div>
+                <div>IPC (est.): <strong id="execIPC">-</strong></div>
+                <div>Registers Modified: <strong id="execRegCount">-</strong></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h6>Memory Access Pattern</h6>
+              <div class="small">
+                <div>Total Accesses: <strong id="memTotal">-</strong></div>
+                <div>Loads: <strong id="memLoads">-</strong></div>
+                <div>Stores: <strong id="memStores">-</strong></div>
+                <div>Branch History: <strong id="branchStats">-</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <h6>Top Instruction Types (during execution)</h6>
+            <div id="execInstrMix" style="display:grid;gap:6px;"></div>
+          </div>
+
+          <div class="mt-3">
+            <h6>Loops Detected</h6>
+            <div id="execLoops" style="display:grid;gap:8px;"></div>
+          </div>
+
+          <div class="mt-3">
+            <h6>Memory Regions</h6>
+            <div class="small">
+              <div>Stack Usage: <strong id="stackUsage">-</strong></div>
+              <div>Heap Usage: <strong id="heapUsage">-</strong></div>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <h6>I/O Operations</h6>
+            <div id="execIO" style="font-family:monospace;font-size:0.85rem;"></div>
+          </div>
+
+          <div class="mt-3">
+            <h6>Program Output</h6>
+            <div id="execOutput" style="font-family:monospace;font-size:0.85rem;background:var(--input-bg);padding:8px;border-radius:4px;max-height:150px;overflow:auto;white-space:pre-wrap;word-break:break-all;"></div>
+          </div>
+
+          <div class="mt-3">
+            <h6>Final Register State (non-zero)</h6>
+            <div id="execRegState" style="font-family:monospace;font-size:0.85rem;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="raw" class="card mt-3" style="display:none">
+        <div class="card-body"><h6>Raw JSON</h6><pre id="rawPre" class="raw-json"></pre></div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default' });
+  </script>
+  <script>
+    // Dark mode initialization and handler
+    const darkModeBtn = document.getElementById('darkModeBtn');
+    const htmlElement = document.documentElement;
+    
+    // Check localStorage for saved preference, default to system preference if available
+    function initDarkMode() {
+      const saved = localStorage.getItem('riscv-dark-mode');
+      let isDarkMode = false;
+      
+      if (saved !== null) {
+        isDarkMode = saved === 'true';
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        isDarkMode = true;
+      }
+      
+      if (isDarkMode) {
+        htmlElement.classList.add('dark-mode');
+        darkModeBtn.textContent = '☀️';
+      } else {
+        htmlElement.classList.remove('dark-mode');
+        darkModeBtn.textContent = '🌙';
+      }
+    }
+    
+    // Toggle dark mode
+    darkModeBtn.addEventListener('click', () => {
+      const isDark = htmlElement.classList.toggle('dark-mode');
+      localStorage.setItem('riscv-dark-mode', isDark ? 'true' : 'false');
+      darkModeBtn.textContent = isDark ? '☀️' : '🌙';
+    });
+    
+    // Initialize dark mode on page load
+    initDarkMode();
+
+    // Helper: escape HTML
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;" })[c] || c); }
+
+    // get result id from path
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const rid = pathParts[pathParts.length - 1];
+
+    if (!rid) {
+      document.getElementById('content').innerHTML = '<div class="card"><p>Missing result id in URL.</p></div>';
+    } else {
+      fetch('/api/result/' + encodeURIComponent(rid)).then(async resp => {
+        if (!resp.ok) {
+          const txt = await resp.text();
+          document.getElementById('content').innerHTML = '<div class="card"><p>Could not retrieve result: ' + (txt || resp.statusText) + '</p></div>';
+          return;
+        }
+
+        const data = await resp.json();
+        renderData(data);
+      }).catch(err => {
+        console.error(err);
+        document.getElementById('content').innerHTML = '<div class="card"><p>Error fetching result.</p></div>';
+      });
+    }
+
+    function renderData(data){
+      // Top cards
+      const s = data.instruction_stats || {};
+      const h = data.heuristics || {};
+      const total = s.total ?? 0;
+      document.getElementById('cardTotal').textContent = total;
+      document.getElementById('cardMemory').textContent = (h.memory_intensity !== undefined ? (Number(h.memory_intensity).toFixed(3)) : '-');
+      document.getElementById('cardBranch').textContent = (h.branch_density !== undefined ? (Number(h.branch_density).toFixed(3)) : '-');
+      document.getElementById('cardRisk').textContent = (h.risk_score !== undefined ? (Number(h.risk_score).toFixed(3)) : '-');
+
+      // Risk card styling
+      const rc = document.getElementById('riskCard');
+      rc.classList.remove('risk-high','risk-med');
+      const risk = Number(h.risk_score || 0);
+      if (risk > 0.6) rc.classList.add('risk-high');
+      else if (risk > 0.4) rc.classList.add('risk-med');
+      else rc.classList.add('risk-low');
+
+      // Instruction summary
+      const ins = data.instruction_summary || [];
+      const insEl = document.getElementById('instrSummaryArea');
+      insEl.innerHTML = ins.length ? ('<ul class="summary-list mb-0">'+ins.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')+'</ul>') : '<div class="small-muted">No summary available.</div>';
+
+      // Stats badges
+      const statsEl = document.getElementById('stats');
+      statsEl.innerHTML = '';
+      const addBadge = (txt, cls) => { const b = document.createElement('span'); b.className='key-pill'; b.style.marginRight='6px'; b.innerHTML = txt; statsEl.appendChild(b); };
+      addBadge('Total: ' + (s.total ?? '-'));
+      addBadge('Loads: ' + (s.loads ?? 0));
+      addBadge('Stores: ' + (s.stores ?? 0));
+      addBadge('Branches: ' + (s.branches ?? 0));
+      addBadge('Arithmetic: ' + (s.arithmetic ?? 0));
+
+      // Percentages
+      const pctWrap = document.getElementById('percentages');
+      pctWrap.innerHTML = '';
+      const pct = data.instruction_percentages || {};
+      for (const [k,v] of Object.entries(pct)){
+        const row = document.createElement('div'); row.className='mb-2';
+        const label = document.createElement('div'); label.className='small-muted'; label.textContent = k + ': ' + (v ?? '-') + '%';
+        const bar = document.createElement('div'); bar.className='bar';
+        const inner = document.createElement('i'); inner.style.width = (Math.max(0, Math.min(100, v||0))) + '%';
+        bar.appendChild(inner);
+        row.appendChild(label); row.appendChild(bar);
+        pctWrap.appendChild(row);
+      }
+
+      // Sparklines: build a small series from the instruction_percentages values
+      const sparkFromPct = (id, values, color='#0d6efd') => {
+        const svg = document.getElementById(id);
+        if (!svg) return;
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+        if (!values || values.length === 0) return;
+        const w = 120, h = 28, pad = 4;
+        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        const maxv = Math.max(...values, 1);
+        const minv = Math.min(...values, 0);
+        const dx = (w - 2*pad) / Math.max(values.length - 1, 1);
+        const points = values.map((v,i) => {
+          const x = pad + i*dx;
+          const y = h - pad - ((v - minv) / (maxv - minv || 1)) * (h - 2*pad);
+          return `${x},${y}`;
+        }).join(' ');
+        const poly = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+        poly.setAttribute('points', points);
+        poly.setAttribute('fill','none');
+        poly.setAttribute('stroke', color);
+        poly.setAttribute('stroke-width','2');
+        svg.appendChild(poly);
+      };
+
+      const pctVals = Object.values(pct).map(v=>Number(v||0));
+      sparkFromPct('sparkMemory', pctVals.slice(0,8), '#0d6efd');
+      sparkFromPct('sparkBranch', pctVals.slice(0,8), '#6f42c1');
+      sparkFromPct('sparkRisk', [Number(h.memory_intensity||0), Number(h.branch_density||0), Number(h.compute_intensity||0)], '#e55353');
+
+      // Sections
+      const tbody = document.getElementById('sectionsTbody'); tbody.innerHTML='';
+      (data.sections || []).forEach(sec=>{
+        const tr = document.createElement('tr');
+        const td1 = document.createElement('td'); td1.textContent = sec.name || '(unnamed)';
+        const td2 = document.createElement('td'); td2.textContent = sec.size ?? '';
+        const td3 = document.createElement('td'); td3.textContent = sec.addr ?? '';
+        const td4 = document.createElement('td'); td4.textContent = (sec.name && sec.name.toLowerCase().includes('.text')) ? 'likely code' : '';
+        tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
+        tbody.appendChild(tr);
+      });
+
+      // Top instructions (if present)
+      const instrListEl = document.getElementById('instrList'); instrListEl.innerHTML='';
+      (data.instructions || []).slice(0,50).forEach(i=>{
+        const d = document.createElement('div'); d.className='mb-1 instr-item';
+        d.innerHTML = '<div><strong>'+escapeHtml(String(i.mnemonic || i.opcode || 'inst'))+'</strong> <span class="small-muted">@'+escapeHtml(String(i.addr || ''))+'</span></div>' + (i.comment?('<div class="small-muted">'+escapeHtml(i.comment)+'</div>'):'');
+        instrListEl.appendChild(d);
+      });
+
+      // Heuristics block + bars
+      const heurEl = document.getElementById('heuristics');
+      heurEl.textContent = 'Memory intensity: ' + (h.memory_intensity ?? '-') + ' · Branch density: ' + (h.branch_density ?? '-') + ' · Compute intensity: ' + (h.compute_intensity ?? '-') + ' · Risk: ' + (h.risk_score ?? '-');
+      const hb = document.getElementById('heurBars'); hb.innerHTML='';
+      [['Memory', h.memory_intensity], ['Branch', h.branch_density], ['Compute', h.compute_intensity]].forEach(it=>{
+        const row = document.createElement('div'); row.className='mb-2';
+        const lab = document.createElement('div'); lab.className='small-muted'; lab.textContent = it[0] + ': ' + (it[1] ?? '-');
+        const bar = document.createElement('div'); bar.className='bar'; const inner = document.createElement('i'); inner.style.width = (Math.max(0, Math.min(100, (it[1]||0)*100))) + '%'; bar.appendChild(inner);
+        row.appendChild(lab); row.appendChild(bar); hb.appendChild(row);
+      });
+
+      // Recommendations
+      const recs = data.recommendations || [];
+      document.getElementById('recs').innerHTML = recs.length ? ('<ul>'+recs.map(r=>'<li>'+escapeHtml(String(r))+'</li>').join('')+'</ul>') : '<div class="small-muted">No recommendations.</div>';
+
+      // Pseudocode (approx.)
+      const pseudoEl = document.getElementById('pseudocode'); pseudoEl.innerHTML='';
+      const pseudo = data.pseudocode || [];
+      const pseudoData = pseudo; // store for filtering
+      if (pseudo.length) {
+        pseudo.forEach(line => {
+          const div = document.createElement('div'); div.textContent = line; div.className='pseudocode-item'; pseudoEl.appendChild(div);
+        });
+      } else {
+        pseudoEl.innerHTML = '<div class="small-muted">No pseudocode available.</div>';
+      }
+
+      // Raw JSON and buttons
+      const jsonStr = JSON.stringify(data, null, 2);
+      document.getElementById('rawPre').textContent = jsonStr;
+
+      document.getElementById('copyBtn').addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(jsonStr); alert('Report JSON copied to clipboard'); } catch(e){ alert('Copy failed'); } });
+      document.getElementById('downloadBtn').addEventListener('click', ()=>{ const blob = new Blob([jsonStr], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'report.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); });
+      document.getElementById('rawBtn').addEventListener('click', ()=>{ const el = document.getElementById('raw'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; });
+
+      // Export as HTML
+      document.getElementById('exportHtmlBtn').addEventListener('click', ()=>{ 
+        try {
+          const pathParts = window.location.pathname.split('/').filter(Boolean);
+          const rid = pathParts[pathParts.length-1];
+          console.log('Exporting report with rid:', rid);
+          if (!rid) {
+            alert('Error: Could not determine report ID from URL');
+            return;
+          }
+          window.location.href = '/api/result/' + encodeURIComponent(rid) + '/export';
+        } catch (err) {
+          console.error('Export error:', err);
+          alert('Error exporting report: ' + err.message);
+        }
+      });
+
+      // Execute binary with simulator
+      document.getElementById('executeBtn').addEventListener('click', async ()=>{ 
+        try {
+          const pathParts = window.location.pathname.split('/').filter(Boolean);
+          const rid = pathParts[pathParts.length-1];
+          
+          if (!rid) {
+            alert('Error: Could not determine report ID');
+            return;
+          }
+          
+          document.getElementById('executeBtn').disabled = true;
+          document.getElementById('executeBtn').textContent = '⏳ Running...';
+          
+          const resp = await fetch('/api/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rid: rid, test_input: '', args: {} })
+          });
+          
+          if (!resp.ok) {
+            const err = await resp.text();
+            alert('Execution error: ' + err);
+            document.getElementById('executeBtn').disabled = false;
+            document.getElementById('executeBtn').textContent = '▶ Execute';
+            return;
+          }
+          
+          const result = await resp.json();
+          console.log('Execution result:', result);
+          
+          // Reload to show new execution results
+          location.reload();
+        } catch (err) {
+          console.error('Execute error:', err);
+          alert('Error executing binary: ' + err.message);
+          document.getElementById('executeBtn').disabled = false;
+          document.getElementById('executeBtn').textContent = '▶ Execute';
+        }
+      });
+
+      // Instruction filter
+      document.getElementById('instrFilter').addEventListener('input', (e) => {
+        const query = (e.target.value || '').toLowerCase();
+        const items = document.querySelectorAll('.instr-item');
+        items.forEach(item => {
+          const text = item.textContent.toLowerCase();
+          item.style.display = text.includes(query) ? 'block' : 'none';
+        });
+      });
+
+      // Pseudocode filter
+      document.getElementById('pseudocodeFilter').addEventListener('input', (e) => {
+        const query = (e.target.value || '').toLowerCase();
+        const items = document.querySelectorAll('.pseudocode-item');
+        items.forEach(item => {
+          const text = item.textContent.toLowerCase();
+          item.style.display = text.includes(query) ? 'block' : 'none';
+        });
+      });
+
+      // Control Flow Graph rendering
+      const cfg = data.cfg || {};
+      const cfgStats = document.getElementById('cfgStats');
+      const cfgContainer = document.getElementById('cfgContainer');
+      
+      if (cfg.entry_point && cfg.nodes && cfg.nodes.length > 0) {
+        cfgStats.innerHTML = `<strong>CFG:</strong> ${cfg.node_count || 0} nodes, ${cfg.edge_count || 0} edges`;
+        
+        // Generate Mermaid diagram from CFG
+        try {
+          let mermaidCode = 'graph TD\n';
+          
+          // Add entry point
+          mermaidCode += `A["Entry: ${cfg.entry_point}"];\n`;
+          
+          // Add nodes (limit to reasonable number)
+          const nodeMap = {};
+          let nodeId = 1;
+          (cfg.nodes || []).slice(0, 20).forEach((node, idx) => {
+            if (node && node !== cfg.entry_point) {
+              nodeMap[node] = `N${idx + 1}`;
+              mermaidCode += `${nodeMap[node]}["${escapeHtml(String(node)).slice(0,12)}"];\n`;
+            }
+          });
+          
+          // Add edges (limit to reasonable number)
+          (cfg.edges || []).slice(0, 30).forEach(edge => {
+            const fromId = nodeMap[edge.from] || 'A';
+            const toId = nodeMap[edge.to] || 'A';
+            const style = edge.type === 'jump' ? '-.->' : edge.type === 'branch' ? '-.->' : '-->';
+            mermaidCode += `${fromId} ${style} ${toId};\n`;
+          });
+          
+          // Render Mermaid diagram
+          cfgContainer.innerHTML = `<div class="mermaid">\n${mermaidCode}\n</div>`;
+          
+          // Re-run Mermaid to render the diagram
+          if (typeof mermaid !== 'undefined') {
+            mermaid.contentLoaded();
+          }
+        } catch (e) {
+          console.error('CFG rendering error:', e);
+          cfgContainer.innerHTML = '<div class="small-muted">Error rendering CFG diagram.</div>';
+        }
+      } else {
+        cfgStats.innerHTML = '<strong>CFG:</strong> No control flow data available.';
+        cfgContainer.innerHTML = '<div class="small-muted">No control flow graph available.</div>';
+      }
+
+      // Instruction Hotspot Heatmap rendering
+      const hotspots = data.instruction_hotspots || {};
+      const hotspotStats = document.getElementById('hotspotStats');
+      const hotspotContainer = document.getElementById('hotspotContainer');
+      
+      if (hotspots.top_mnemonics && hotspots.top_mnemonics.length > 0) {
+        hotspotStats.innerHTML = `<strong>Top ${hotspots.top_mnemonics.length} mnemonics:</strong> ${hotspots.total_unique || 0} unique instructions`;
+        
+        // Create heatmap bars with color intensity
+        hotspotContainer.innerHTML = '';
+        hotspots.top_mnemonics.forEach(item => {
+          const intensity = item.intensity || 0;
+          const hue = 200 - (intensity * 1.5); // Blue to red gradient
+          const color = `hsl(${Math.max(0, hue)}, 70%, 50%)`;
+          
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex; align-items:center; gap:12px;';
+          
+          const label = document.createElement('span');
+          label.style.cssText = 'min-width:80px; font-weight:500; font-family:monospace;';
+          label.textContent = item.mnemonic.toUpperCase();
+          
+          const barContainer = document.createElement('div');
+          barContainer.style.cssText = `flex:1; height:28px; background:var(--input-bg); border-radius:4px; border:1px solid var(--input-border); overflow:hidden; display:flex; align-items:center;`;
+          
+          const bar = document.createElement('div');
+          bar.style.cssText = `height:100%; background:${color}; width:${intensity}%; transition:width 0.2s ease; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; color:white; font-size:0.75rem; font-weight:600;`;
+          bar.textContent = item.count > 0 ? item.count : '';
+          
+          const stats = document.createElement('span');
+          stats.style.cssText = 'min-width:80px; text-align:right; font-size:0.85rem; color:var(--muted);';
+          stats.textContent = `${item.percentage.toFixed(1)}%`;
+          
+          barContainer.appendChild(bar);
+          row.appendChild(label);
+          row.appendChild(barContainer);
+          row.appendChild(stats);
+          
+          hotspotContainer.appendChild(row);
+        });
+      } else {
+        hotspotStats.innerHTML = '<strong>Hotspots:</strong> No instruction data available.';
+        hotspotContainer.innerHTML = '<div class="small-muted">No instruction hotspots available.</div>';
+      }
+
+      // Render execution results if available
+      const execResults = data.execution_results || {};
+      if (execResults.instructions_executed) {
+        const execCard = document.getElementById('executionCard');
+        execCard.style.display = 'block';
+        
+        document.getElementById('execStatus').textContent = 'Completed';
+        document.getElementById('execInstrCount').textContent = execResults.instructions_executed;
+        document.getElementById('execCycles').textContent = execResults.cycles_estimate;
+        document.getElementById('execIPC').textContent = (execResults.ipc_estimate || 0).toFixed(3);
+        document.getElementById('execRegCount').textContent = execResults.unique_registers_written;
+        
+        const memAccess = execResults.memory_accesses || {};
+        document.getElementById('memTotal').textContent = memAccess.total || 0;
+        document.getElementById('memLoads').textContent = memAccess.loads || 0;
+        document.getElementById('memStores').textContent = memAccess.stores || 0;
+        
+        const branchTaken = execResults.branches_taken || 0;
+        const branchTotal = execResults.branches_total || 0;
+        document.getElementById('branchStats').textContent = `${branchTaken}/${branchTotal} taken`;
+        
+        // Instruction mix during execution
+        const instrMix = document.getElementById('execInstrMix');
+        instrMix.innerHTML = '';
+        const instMixData = Object.entries(execResults.instruction_mix || {})
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8);
+        
+        instMixData.forEach(([mn, count]) => {
+          const item = document.createElement('div');
+          item.style.cssText = 'display:flex; gap:12px; align-items:center;';
+          
+          const label = document.createElement('span');
+          label.textContent = mn.toUpperCase();
+          label.style.cssText = 'min-width:60px; font-family:monospace; font-weight:500;';
+          
+          const bar = document.createElement('div');
+          bar.style.cssText = 'flex:1; height:18px; background:var(--input-bg); border-radius:3px; overflow:hidden;';
+          const inner = document.createElement('div');
+          inner.style.cssText = `height:100%; background:#0d6efd; width:${Math.min(100, (count / (execResults.instructions_executed || 1)) * 100)}%;`;
+          bar.appendChild(inner);
+          
+          const countSpan = document.createElement('span');
+          countSpan.textContent = count;
+          countSpan.style.cssText = 'min-width:40px; text-align:right; font-size:0.85rem;';
+          
+          item.appendChild(label);
+          item.appendChild(bar);
+          item.appendChild(countSpan);
+          instrMix.appendChild(item);
+        });
+        
+        // Loops detected
+        const loopsContainer = document.getElementById('execLoops');
+        const loops = execResults.loops_detected || [];
+        if (loops.length > 0) {
+          loopsContainer.innerHTML = loops.map(l => `
+            <div style="font-size:0.85rem;">
+              <strong>${l.entry} → ${l.exit}</strong> 
+              <span class="badge bg-primary">${l.iterations} iters</span>
+            </div>
+          `).join('');
+        } else {
+          loopsContainer.innerHTML = '<div class="small-muted">No loops detected.</div>';
+        }
+        
+        // Memory regions (stack/heap)
+        document.getElementById('stackUsage').textContent = execResults.stack_usage || 'N/A';
+        document.getElementById('heapUsage').textContent = execResults.heap_usage || 'N/A';
+        
+        // I/O operations
+        const ioContainer = document.getElementById('execIO');
+        const ioOps = execResults.io_operations || [];
+        if (ioOps.length > 0) {
+          ioContainer.innerHTML = ioOps.slice(0, 10).map(op => {
+            if (op.type === 'write') {
+              return `write(${op.fd}, ..., ${op.count}) → "${escapeHtml(op.data)}"`;
+            } else if (op.type === 'read') {
+              return `read(${op.fd}, ..., ${op.count})`;
+            }
+            return escapeHtml(JSON.stringify(op));
+          }).join('<br/>');
+        } else {
+          ioContainer.innerHTML = '<div class="small-muted">No I/O operations.</div>';
+        }
+        
+        // Program output
+        const output = execResults.output || '';
+        document.getElementById('execOutput').textContent = output || '(no output)';
+        
+        // Register state
+        const regState = document.getElementById('execRegState');
+        const finalRegs = execResults.final_register_state || {};
+        regState.innerHTML = Object.entries(finalRegs)
+          .map(([reg, val]) => `<div>${reg}: 0x${val.toString(16).padStart(16, '0')}</div>`)
+          .join('') || '<div class="small-muted">No registers modified.</div>';
+      }
+
+      // quick links
+      document.getElementById('downloadReport').href = '/api/result/' + encodeURIComponent(rid);
+      document.getElementById('openRaw').addEventListener('click', (e)=>{ e.preventDefault(); document.getElementById('raw').style.display = 'block'; window.scrollTo({top: document.getElementById('raw').offsetTop, behavior:'smooth'}); });
+    }
+  </script>
+</body>
+</html>

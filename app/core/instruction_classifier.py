@@ -1,7 +1,8 @@
-LOADS = {"lb","lh","lw","ld","lbu","lhu","lwu"}
-STORES = {"sb","sh","sw","sd"}
-BRANCHES = {"beq","bne","blt","bge","jal","jalr"}
-MULDIV = {"mul","mulh","div","rem"}
+LOADS = {"lb","lh","lw","ld","lbu","lhu","lwu","c.ld","c.ldsp","c.lw","c.lwsp"}
+STORES = {"sb","sh","sw","sd","c.sd","c.sdsp","c.sw","c.swsp"}
+BRANCHES = {"beq","bne","blt","bge","jal","jalr","c.jal","c.jalr","c.j","c.jr","c.beqz","c.bnez"}
+MULDIV = {"mul","mulh","div","rem","c.mul","c.div"}
+COMPRESSED = {"c.addi","c.addiw","c.addw","c.add","c.mv","c.li","c.lui","c.sub","c.subw","c.and","c.andi","c.or","c.xor","c.slli","c.srli","c.srai"}
 
 def enrich(report):
     stats = {
@@ -31,6 +32,8 @@ def enrich(report):
             stats["mul_div"] += 1
         elif m.startswith("f"):
             stats["floating"] += 1
+        elif m in COMPRESSED:
+            stats["arithmetic"] += 1
         else:
             stats["arithmetic"] += 1
         

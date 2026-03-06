@@ -86,6 +86,177 @@ async def get_html():
     return FileResponse("app/static/gpt.html")
 
 
+@router.post('/api/execute')
+async def execute_binary(payload: dict = Body(...), request: Request = None):
+    """Execute a binary analysis result using the RISC-V simulator.
+    
+    Request body:
+    {
+        "rid": "<report_id>",
+        "test_input": "<optional stdin input>",
+        "args": {"a0": 0, "a1": 0}  # optional ABI registers
+    }
+    
+    Returns execution statistics and benchmarks.
+    """
+    from app.core.simulator import RiscVSimulator
+    
+    store = request.app.state.temp_reports
+    rid = payload.get("rid")
+    test_input = payload.get("test_input", "")
+    args = payload.get("args", {})
+    
+    if not rid or rid not in store:
+        raise HTTPException(status_code=404, detail='report not found')
+    
+    report = store[rid]
+    instructions = report.get("instructions", [])
+    
+    if not instructions:
+        raise HTTPException(status_code=400, detail='no instructions to execute')
+    
+    # Initialize simulator
+    sim = RiscVSimulator(memory_size=2 * 1024 * 1024)  # 2MB memory
+    
+    # Set up argument registers if provided
+    if args:
+        sim.set_registers_from_abi(
+            a0=args.get("a0", 0),
+            a1=args.get("a1", 0),
+            a2=args.get("a2", 0),
+            a3=args.get("a3", 0)
+        )
+    
+    # Set input if provided
+    if test_input:
+        sim.set_input(test_input)
+    
+    # Run simulation (max 100k instructions to prevent infinite loops)
+    exec_stats = sim.run(instructions, max_iterations=100000)
+    
+    # Store execution results in report for later retrieval
+    store[rid]["execution_results"] = exec_stats
+    
+    return {
+        "rid": rid,
+        "status": "success",
+        "execution": exec_stats
+    }
+
+
+@router.post('/api/benchmark')
+async def benchmark_comparison(payload: dict = Body(...), request: Request = None):
+    """Compare execution metrics between two binary versions.
+    
+    Request body:
+    {
+        "rid1": "<report_id_v1>",
+        "rid2": "<report_id_v2>",
+        "test_input": "<optional stdin input>"
+    }
+    
+    Returns performance delta and comparison metrics.
+    """
+    from app.core.simulator import RiscVSimulator
+    
+    store = request.app.state.temp_reports
+    rid1 = payload.get("rid1")
+    rid2 = payload.get("rid2")
+    test_input = payload.get("test_input", "")
+    
+    if not rid1 or rid1 not in store or not rid2 or rid2 not in store:
+        raise HTTPException(status_code=404, detail='one or both reports not found')
+    
+    report1 = store[rid1]
+    report2 = store[rid2]
+    
+    # Get or run execution results
+    exec1 = report1.get("execution_results")
+    if not exec1:
+        sim1 = RiscVSimulator()
+        sim1.set_input(test_input)
+        exec1 = sim1.run(report1.get("instructions", []), max_iterations=100000)
+        report1["execution_results"] = exec1
+    
+    exec2 = report2.get("execution_results")
+    if not exec2:
+        sim2 = RiscVSimulator()
+        sim2.set_input(test_input)
+        exec2 = sim2.run(report2.get("instructions", []), max_iterations=100000)
+        report2["execution_results"] = exec2
+    
+    # Calculate deltas
+    instr_delta = exec2["instructions_executed"] - exec1["instructions_executed"]
+    instr_pct_delta = (instr_delta / max(1, exec1["instructions_executed"])) * 100
+    
+    cycles_delta = exec2["cycles_estimate"] - exec1["cycles_estimate"]
+    cycles_pct_delta = (cycles_delta / max(1, exec1["cycles_estimate"])) * 100
+    
+    ipc_delta = exec2["ipc_estimate"] - exec1["ipc_estimate"]
+    
+    # Memory access comparison
+    mem_delta = exec2["memory_accesses"]["total"] - exec1["memory_accesses"]["total"]
+    mem_pct_delta = (mem_delta / max(1, exec1["memory_accesses"]["total"])) * 100
+    
+    comparison = {
+        "v1_id": rid1,
+        "v2_id": rid2,
+        "instructions": {
+            "v1": exec1["instructions_executed"],
+            "v2": exec2["instructions_executed"],
+            "delta": instr_delta,
+            "delta_pct": instr_pct_delta,
+            "status": "improved" if instr_delta < 0 else "regressed" if instr_delta > 0 else "same"
+        },
+        "cycles": {
+            "v1": exec1["cycles_estimate"],
+            "v2": exec2["cycles_estimate"],
+            "delta": cycles_delta,
+            "delta_pct": cycles_pct_delta,
+            "status": "improved" if cycles_delta < 0 else "regressed" if cycles_delta > 0 else "same"
+        },
+        "ipc": {
+            "v1": round(exec1["ipc_estimate"], 3),
+            "v2": round(exec2["ipc_estimate"], 3),
+            "delta": round(ipc_delta, 3)
+        },
+        "memory_accesses": {
+            "v1": exec1["memory_accesses"]["total"],
+            "v2": exec2["memory_accesses"]["total"],
+            "delta": mem_delta,
+            "delta_pct": mem_pct_delta,
+            "status": "improved" if mem_delta < 0 else "regressed" if mem_delta > 0 else "same"
+        },
+        "branches": {
+            "v1": exec1["branches_total"],
+            "v2": exec2["branches_total"],
+            "delta": exec2["branches_total"] - exec1["branches_total"]
+        },
+        "loops_detected": {
+            "v1": len(exec1.get("loops_detected", [])),
+            "v2": len(exec2.get("loops_detected", []))
+        },
+        "stack_usage": {
+            "v1": exec1.get("stack_usage", "N/A"),
+            "v2": exec2.get("stack_usage", "N/A")
+        },
+        "heap_usage": {
+            "v1": exec1.get("heap_usage", "N/A"),
+            "v2": exec2.get("heap_usage", "N/A")
+        }
+    }
+    
+    return {
+        "status": "success",
+        "comparison": comparison
+    }
+
+
+@router.get("/")
+async def get_html():
+    return FileResponse("app/static/gpt.html")
+
+
 @router.get('/api/result/{rid}/export')
 async def export_result_html(rid: str, request: Request):
     """Export a complete result as a self-contained HTML file with embedded JSON."""

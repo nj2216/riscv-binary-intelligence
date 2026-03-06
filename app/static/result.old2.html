@@ -544,7 +544,7 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
             Heatmap
           </button>
-          <button class="tab-btn" data-tab="execution" id="tabExecution" style="display:none; background-color: #5bc3ff;">
+          <button class="tab-btn" data-tab="execution" id="tabExecution" style="display:none">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
             Execution
             <span class="tab-badge">NEW</span>
@@ -710,10 +710,6 @@
   <script>
     mermaid.initialize({ startOnLoad: false, theme: 'default' });
 
-    // ── CFG state (declared first so applyTheme can reference them) ──
-    let cfgMermaidSrc = null;
-    let cfgRendered = false;
-
     // ── Theme ──
     const htmlEl = document.documentElement;
     const darkBtn = document.getElementById('darkModeBtn');
@@ -724,11 +720,6 @@
       htmlEl.setAttribute('data-theme', t);
       darkBtn.innerHTML = t === 'light' ? MOON : SUN;
       mermaid.initialize({ startOnLoad: false, theme: t === 'light' ? 'default' : 'dark' });
-      // Re-render CFG with new theme if source is ready
-      if (cfgMermaidSrc) {
-        cfgRendered = false;
-        if (document.getElementById('tab-cfg').classList.contains('active')) renderCFG();
-      }
     }
 
     // Default light; respect saved preference
@@ -741,30 +732,11 @@
     });
 
     // ── Tabs ──
-
-    async function renderCFG() {
-      if (!cfgMermaidSrc) return;
-      const container = document.getElementById('cfgContainer');
-      const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
-      try {
-        // Use the mermaid.render API (v10) which works on hidden elements
-        const id = 'mermaid-cfg-' + Date.now();
-        const { svg } = await mermaid.render(id, cfgMermaidSrc);
-        container.innerHTML = svg;
-        cfgRendered = true;
-      } catch(e) {
-        console.error('Mermaid render error:', e);
-        container.innerHTML = '<div class="empty">Error rendering CFG: ' + e.message + '</div>';
-      }
-    }
-
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const t = btn.dataset.tab;
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
         document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + t));
-        // Render CFG when its tab becomes visible
-        if (t === 'cfg' && !cfgRendered) renderCFG();
       });
     });
 
@@ -906,24 +878,26 @@
         tbody.appendChild(tr);
       });
 
-      // CFG tab — build mermaid source, render lazily when tab is clicked
+      // CFG tab
       const cfg = data.cfg || {};
       const cfgStatsEl = document.getElementById('cfgStats');
       const cfgContainer = document.getElementById('cfgContainer');
       if (cfg.entry_point && cfg.nodes && cfg.nodes.length) {
         cfgStatsEl.textContent = `${cfg.node_count||0} nodes · ${cfg.edge_count||0} edges`;
-        let md = 'graph TD\n';
-        md += `A["Entry: ${cfg.entry_point}"];\n`;
-        const nm = {};
-        (cfg.nodes || []).slice(0, 20).forEach((node, idx) => {
-          if (node && node !== cfg.entry_point) { nm[node] = `N${idx+1}`; md += `${nm[node]}["${esc(String(node)).slice(0,12)}"];\n`; }
-        });
-        (cfg.edges || []).slice(0, 30).forEach(e => {
-          const f = nm[e.from] || 'A', t2 = nm[e.to] || 'A';
-          md += `${f} ${(e.type==='jump'||e.type==='branch') ? '-.->' : '-->'} ${t2};\n`;
-        });
-        cfgMermaidSrc = md;
-        cfgContainer.innerHTML = '<div class="empty" style="padding:16px 0;">Click the <strong>Control Flow</strong> tab to render the diagram.</div>';
+        try {
+          let md = 'graph TD\n';
+          md += `A["Entry: ${cfg.entry_point}"];\n`;
+          const nm = {};
+          (cfg.nodes || []).slice(0, 20).forEach((node, idx) => {
+            if (node && node !== cfg.entry_point) { nm[node] = `N${idx+1}`; md += `${nm[node]}["${esc(String(node)).slice(0,12)}"];\n`; }
+          });
+          (cfg.edges || []).slice(0, 30).forEach(e => {
+            const f = nm[e.from] || 'A', t = nm[e.to] || 'A';
+            md += `${f} ${(e.type==='jump'||e.type==='branch') ? '-.->' : '-->'} ${t};\n`;
+          });
+          cfgContainer.innerHTML = `<div class="mermaid">${md}</div>`;
+          mermaid.init(undefined, cfgContainer.querySelector('.mermaid'));
+        } catch(e) { cfgContainer.innerHTML = '<div class="empty">Error rendering CFG.</div>'; }
       } else {
         cfgStatsEl.textContent = 'No data';
         cfgContainer.innerHTML = '<div class="empty">No control flow graph available.</div>';

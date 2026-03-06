@@ -1,0 +1,1162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RISC-V Binary Intelligence — Result</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c14;
+      --surface: #0d1220;
+      --surface2: #131929;
+      --surface3: #181f30;
+      --border: rgba(99,132,255,0.1);
+      --border-md: rgba(99,132,255,0.18);
+      --accent: #4f7dff;
+      --accent2: #7b5cfa;
+      --accent-glow: rgba(79,125,255,0.15);
+      --text: #e8eaf6;
+      --text-muted: #6b7280;
+      --text-dim: #3d4558;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --risk-high: #ef4444;
+      --risk-med: #f59e0b;
+      --risk-low: #22c55e;
+      --mono: 'Space Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+      --nav-h: 56px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 40% at 5% 0%, rgba(79,125,255,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 95% 100%, rgba(123,92,250,0.05) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(99,132,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,132,255,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Nav */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: var(--nav-h);
+      background: rgba(8,12,20,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 16px;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .nav-brand-icon {
+      width: 26px;
+      height: 26px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .nav-spacer { flex: 1; }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      outline: none;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border-md); }
+
+    .btn-accent {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(79,125,255,0.2);
+    }
+    .btn-accent:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(79,125,255,0.35); }
+
+    .btn-run {
+      background: rgba(34,197,94,0.1);
+      color: var(--success);
+      border: 1px solid rgba(34,197,94,0.2);
+    }
+    .btn-run:hover { background: rgba(34,197,94,0.18); border-color: rgba(34,197,94,0.4); }
+    .btn-run:disabled { opacity: 0.5; pointer-events: none; }
+
+    /* Layout */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    /* Metric cards */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      transition: border-color 0.2s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card:hover { border-color: var(--border-md); transform: translateY(-2px); }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .metric-card:hover::before { opacity: 1; }
+
+    .metric-card.risk-high { border-color: rgba(239,68,68,0.25); }
+    .metric-card.risk-high::before { background: var(--risk-high); opacity: 0.8; }
+    .metric-card.risk-med  { border-color: rgba(245,158,11,0.25); }
+    .metric-card.risk-med::before  { background: var(--risk-med); opacity: 0.8; }
+    .metric-card.risk-low  { border-color: rgba(34,197,94,0.25); }
+    .metric-card.risk-low::before  { background: var(--risk-low); opacity: 0.8; }
+
+    .metric-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    .metric-risk-high { color: var(--risk-high); }
+    .metric-risk-med  { color: var(--risk-med); }
+    .metric-risk-low  { color: var(--risk-low); }
+
+    /* Two-column grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      text-transform: uppercase;
+    }
+
+    .card-body {
+      padding: 20px;
+    }
+
+    /* Pills / badges */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(79,125,255,0.1);
+      color: var(--accent);
+      border: 1px solid rgba(79,125,255,0.15);
+    }
+
+    .pill-success { background: rgba(34,197,94,0.1); color: var(--success); border-color: rgba(34,197,94,0.2); }
+    .pill-warn    { background: rgba(245,158,11,0.1); color: var(--warning); border-color: rgba(245,158,11,0.2); }
+    .pill-danger  { background: rgba(239,68,68,0.1);  color: var(--danger);  border-color: rgba(239,68,68,0.2); }
+
+    /* Bars */
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .bar-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 80px;
+      color: var(--text);
+    }
+
+    .bar-track {
+      flex: 1;
+      height: 8px;
+      background: var(--surface3);
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.8s cubic-bezier(0.25,1,0.5,1);
+    }
+
+    .bar-pct {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      min-width: 44px;
+      text-align: right;
+    }
+
+    /* Heuristic bars */
+    .heur-high .bar-fill { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .heur-med  .bar-fill { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .heur-low  .bar-fill { background: linear-gradient(90deg, #22c55e, #16a34a); }
+
+    /* Table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .data-table th {
+      padding: 8px 12px;
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(99,132,255,0.05);
+      color: var(--text);
+      vertical-align: middle;
+    }
+
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(79,125,255,0.03); }
+
+    .mono { font-family: var(--mono); font-size: 11px; }
+
+    /* Scroll areas */
+    .scroll-box {
+      max-height: 240px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-md) transparent;
+    }
+
+    .scroll-box::-webkit-scrollbar { width: 4px; }
+    .scroll-box::-webkit-scrollbar-track { background: transparent; }
+    .scroll-box::-webkit-scrollbar-thumb { background: var(--border-md); border-radius: 4px; }
+
+    /* Search input */
+    .search-input {
+      width: 100%;
+      padding: 8px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 12px;
+    }
+
+    .search-input::placeholder { color: var(--text-dim); }
+    .search-input:focus { border-color: var(--border-md); }
+
+    /* Code / pseudocode */
+    .code-line {
+      padding: 3px 0;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      border-bottom: 1px solid rgba(99,132,255,0.04);
+    }
+
+    .code-line:last-child { border-bottom: none; }
+
+    .code-addr { color: var(--accent); margin-right: 10px; opacity: 0.6; }
+    .code-mnemonic { color: #93c5fd; font-weight: 700; margin-right: 8px; }
+    .code-comment { color: var(--text-dim); font-style: italic; }
+
+    /* Risk indicator */
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .risk-badge-high { background: rgba(239,68,68,0.12); color: var(--risk-high); border: 1px solid rgba(239,68,68,0.25); }
+    .risk-badge-med  { background: rgba(245,158,11,0.12); color: var(--risk-med);  border: 1px solid rgba(245,158,11,0.25); }
+    .risk-badge-low  { background: rgba(34,197,94,0.12);  color: var(--risk-low);  border: 1px solid rgba(34,197,94,0.25); }
+
+    /* Rec list */
+    .rec-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .rec-item:last-child { border-bottom: none; }
+    .rec-bullet { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+
+    /* Stat row */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(99,132,255,0.05);
+      font-size: 12px;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-row-key { color: var(--text-muted); }
+    .stat-row-val { font-family: var(--mono); font-weight: 700; color: var(--text); font-size: 11px; }
+
+    /* CFG */
+    .cfg-area {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      max-height: 380px;
+      overflow: auto;
+    }
+
+    /* Raw JSON */
+    .raw-pre {
+      background: #060a10;
+      color: #7dd3fc;
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 16px;
+      border-radius: 10px;
+      max-height: 300px;
+      overflow: auto;
+      white-space: pre;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-md) transparent;
+    }
+
+    /* Section badges */
+    .section-tag {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(79,125,255,0.1);
+      color: var(--accent);
+    }
+
+    /* Exec card */
+    .exec-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 600px) { .exec-grid { grid-template-columns: 1fr; } }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .spin {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Mermaid override */
+    .mermaid { filter: invert(0.85) hue-rotate(180deg); }
+
+    /* Dark mode toggle (persisted) */
+    [data-theme="light"] {
+      --bg: #f5f7fa;
+      --surface: #ffffff;
+      --surface2: #f0f2f7;
+      --surface3: #e8ebf2;
+      --border: rgba(79,125,255,0.12);
+      --border-md: rgba(79,125,255,0.25);
+      --text: #111827;
+      --text-muted: #6b7280;
+      --text-dim: #9ca3af;
+    }
+
+    [data-theme="light"] body::before,
+    [data-theme="light"] body::after { opacity: 0.4; }
+
+    [data-theme="light"] .nav { background: rgba(245,247,250,0.9); }
+    [data-theme="light"] .raw-pre { background: #1a1f2e; color: #7dd3fc; }
+    [data-theme="light"] .mermaid { filter: none; }
+  </style>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="nav" id="navbar">
+    <a class="nav-brand" href="/">
+      <span class="nav-brand-icon">⬡</span>
+      RISC-V BI
+    </a>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button id="darkModeBtn" class="btn btn-ghost" title="Toggle theme">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+      </button>
+      <button id="executeBtn" class="btn btn-run">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Execute
+      </button>
+      <button id="copyBtn" class="btn btn-ghost">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy JSON
+      </button>
+      <button id="downloadBtn" class="btn btn-ghost">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </button>
+      <button id="exportHtmlBtn" class="btn btn-accent">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        Export HTML
+      </button>
+      <button id="rawBtn" class="btn btn-ghost">{ }</button>
+    </div>
+  </nav>
+
+  <main class="page">
+    <div id="content">
+
+      <!-- Metric Cards -->
+      <div class="metrics" id="metricsRow">
+        <div class="metric-card">
+          <div class="metric-label">Total Instructions</div>
+          <div class="metric-value" id="cardTotal">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Memory Intensity</div>
+          <div class="metric-value" id="cardMemory">—</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Branch Density</div>
+          <div class="metric-value" id="cardBranch">—</div>
+        </div>
+        <div class="metric-card" id="riskCard">
+          <div class="metric-label">Risk Score</div>
+          <div class="metric-value" id="cardRisk">—</div>
+        </div>
+      </div>
+
+      <!-- Main Two-Col -->
+      <div class="grid-2">
+
+        <!-- Left column -->
+        <div>
+          <!-- Summary -->
+          <div class="card" style="animation-delay:0.05s">
+            <div class="card-header">
+              <span class="card-title">Instruction Summary</span>
+              <div id="statPills" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+            </div>
+            <div class="card-body">
+              <div id="instrSummaryArea" style="font-size:13px;color:var(--text-muted);margin-bottom:16px;"></div>
+
+              <div style="margin-bottom:16px;">
+                <div class="metric-label" style="margin-bottom:10px;">Instruction Percentages</div>
+                <div id="percentages"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sections -->
+          <div class="card" style="animation-delay:0.1s">
+            <div class="card-header">
+              <span class="card-title">Sections</span>
+            </div>
+            <div class="scroll-box">
+              <table class="data-table">
+                <thead><tr><th>Name</th><th>Size</th><th>Address</th><th>Type</th></tr></thead>
+                <tbody id="sectionsTbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pseudocode -->
+          <div class="card" style="animation-delay:0.15s">
+            <div class="card-header">
+              <span class="card-title">Pseudocode (approx.)</span>
+            </div>
+            <div class="card-body">
+              <input type="text" class="search-input" id="pseudocodeFilter" placeholder="Filter by address or keyword…" />
+              <div class="scroll-box" id="pseudocode">
+                <div style="color:var(--text-muted);font-size:12px;">No pseudocode available.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Instructions -->
+          <div class="card" style="animation-delay:0.2s">
+            <div class="card-header">
+              <span class="card-title">Instructions (top entries)</span>
+            </div>
+            <div class="card-body">
+              <input type="text" class="search-input" id="instrFilter" placeholder="Filter by mnemonic or operand…" />
+              <div class="scroll-box" id="instrList">
+                <div style="color:var(--text-muted);font-size:12px;">No instructions loaded.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right column -->
+        <div>
+
+          <!-- Heuristics -->
+          <div class="card" style="animation-delay:0.08s">
+            <div class="card-header">
+              <span class="card-title">Heuristics</span>
+              <div id="riskBadgeWrap"></div>
+            </div>
+            <div class="card-body">
+              <div id="heurBars"></div>
+            </div>
+          </div>
+
+          <!-- Recommendations -->
+          <div class="card" style="animation-delay:0.12s">
+            <div class="card-header">
+              <span class="card-title">Recommendations</span>
+            </div>
+            <div class="card-body">
+              <div id="recs" style="color:var(--text-muted);font-size:13px;">(none)</div>
+            </div>
+          </div>
+
+          <!-- Quick links -->
+          <div class="card" style="animation-delay:0.16s">
+            <div class="card-header">
+              <span class="card-title">Quick Links</span>
+            </div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+              <a id="downloadReport" class="btn btn-accent" href="#" style="justify-content:center;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Open JSON Report
+              </a>
+              <a id="openRaw" class="btn btn-ghost" href="#" style="justify-content:center;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                Show Raw JSON
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CFG -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Control Flow Graph</span>
+          <span id="cfgStats" style="font-size:11px;font-family:var(--mono);color:var(--text-muted);"></span>
+        </div>
+        <div class="card-body">
+          <div class="cfg-area" id="cfgContainer">
+            <div style="color:var(--text-muted);font-size:12px;">Loading control flow graph…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Instruction Hotspot Heatmap</span>
+          <span id="hotspotStats" style="font-size:11px;font-family:var(--mono);color:var(--text-muted);"></span>
+        </div>
+        <div class="card-body">
+          <div id="hotspotContainer" style="display:grid;gap:8px;">
+            <div style="color:var(--text-muted);font-size:12px;">Loading heatmap…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Execution results (hidden until available) -->
+      <div id="executionCard" class="card" style="display:none">
+        <div class="card-header">
+          <span class="card-title">Execution Results</span>
+          <span id="execStatus" class="pill pill-success"></span>
+        </div>
+        <div class="card-body">
+          <div class="exec-grid">
+            <div>
+              <div class="metric-label" style="margin-bottom:10px;">Execution Summary</div>
+              <div id="execSummaryStats"></div>
+            </div>
+            <div>
+              <div class="metric-label" style="margin-bottom:10px;">Memory Access Pattern</div>
+              <div id="execMemStats"></div>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;">
+            <div class="metric-label" style="margin-bottom:10px;">Top Instruction Types</div>
+            <div id="execInstrMix" style="display:grid;gap:8px;"></div>
+          </div>
+
+          <div style="margin-top:20px;">
+            <div class="metric-label" style="margin-bottom:10px;">Loops Detected</div>
+            <div id="execLoops" style="display:grid;gap:8px;"></div>
+          </div>
+
+          <div class="exec-grid" style="margin-top:20px;">
+            <div>
+              <div class="metric-label" style="margin-bottom:8px;">Memory Regions</div>
+              <div id="execMemRegions"></div>
+            </div>
+            <div>
+              <div class="metric-label" style="margin-bottom:8px;">I/O Operations</div>
+              <div id="execIO" style="font-family:var(--mono);font-size:11px;color:var(--text-muted);"></div>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;">
+            <div class="metric-label" style="margin-bottom:8px;">Program Output</div>
+            <div id="execOutput" style="font-family:var(--mono);font-size:11px;background:var(--surface2);padding:12px;border-radius:8px;max-height:150px;overflow:auto;white-space:pre-wrap;color:var(--text-muted);border:1px solid var(--border);"></div>
+          </div>
+
+          <div style="margin-top:20px;">
+            <div class="metric-label" style="margin-bottom:8px;">Final Register State</div>
+            <div id="execRegState" style="font-family:var(--mono);font-size:11px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px;color:var(--text-muted);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Raw JSON (hidden) -->
+      <div id="raw" class="card" style="display:none">
+        <div class="card-header">
+          <span class="card-title">Raw JSON</span>
+        </div>
+        <div class="card-body">
+          <pre id="rawPre" class="raw-pre"></pre>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: false, theme: 'dark', darkMode: true });
+
+    // --- Theme ---
+    const htmlEl = document.documentElement;
+    const darkBtn = document.getElementById('darkModeBtn');
+
+    function applyTheme(t) {
+      if (t === 'light') {
+        htmlEl.setAttribute('data-theme', 'light');
+        darkBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+      } else {
+        htmlEl.removeAttribute('data-theme');
+        darkBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>';
+      }
+    }
+
+    (function initTheme() {
+      const saved = localStorage.getItem('riscv-theme');
+      const pref = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      applyTheme(saved || pref);
+    })();
+
+    darkBtn.addEventListener('click', () => {
+      const cur = htmlEl.getAttribute('data-theme');
+      const next = cur === 'light' ? 'dark' : 'light';
+      localStorage.setItem('riscv-theme', next);
+      applyTheme(next);
+    });
+
+    // --- Helpers ---
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[c]||c); }
+
+    function statRow(key, val) {
+      const el = document.createElement('div');
+      el.className = 'stat-row';
+      el.innerHTML = '<span class="stat-row-key">' + escapeHtml(key) + '</span><span class="stat-row-val">' + escapeHtml(String(val ?? '—')) + '</span>';
+      return el;
+    }
+
+    function barRow(label, value, max, colorClass) {
+      const pct = Math.max(0, Math.min(100, ((value || 0) / (max || 1)) * 100));
+      const row = document.createElement('div');
+      row.className = 'bar-row' + (colorClass ? ' ' + colorClass : '');
+      row.innerHTML = `
+        <span class="bar-label">${escapeHtml(label)}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <span class="bar-pct">${typeof value === 'number' ? value.toFixed(3) : value}</span>
+      `;
+      return row;
+    }
+
+    // --- Fetch & render ---
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const rid = pathParts[pathParts.length - 1];
+
+    if (!rid) {
+      document.getElementById('content').innerHTML = '<div class="card"><div class="card-body" style="color:var(--danger)">Missing result ID in URL.</div></div>';
+    } else {
+      fetch('/api/result/' + encodeURIComponent(rid))
+        .then(async r => {
+          if (!r.ok) throw new Error((await r.text()) || r.statusText);
+          return r.json();
+        })
+        .then(renderData)
+        .catch(err => {
+          document.getElementById('content').innerHTML = '<div class="card"><div class="card-body" style="color:var(--danger)">Could not load result: ' + escapeHtml(err.message) + '</div></div>';
+        });
+    }
+
+    function renderData(data) {
+      const s = data.instruction_stats || {};
+      const h = data.heuristics || {};
+
+      // Metric cards
+      const total = s.total ?? 0;
+      document.getElementById('cardTotal').textContent = total.toLocaleString();
+      document.getElementById('cardMemory').textContent = h.memory_intensity !== undefined ? Number(h.memory_intensity).toFixed(3) : '—';
+      document.getElementById('cardBranch').textContent = h.branch_density !== undefined ? Number(h.branch_density).toFixed(3) : '—';
+      const riskVal = Number(h.risk_score || 0);
+      const cardRiskEl = document.getElementById('cardRisk');
+      cardRiskEl.textContent = h.risk_score !== undefined ? riskVal.toFixed(3) : '—';
+
+      const rc = document.getElementById('riskCard');
+      if (riskVal > 0.6) {
+        rc.classList.add('risk-high');
+        cardRiskEl.classList.add('metric-risk-high');
+      } else if (riskVal > 0.4) {
+        rc.classList.add('risk-med');
+        cardRiskEl.classList.add('metric-risk-med');
+      } else {
+        rc.classList.add('risk-low');
+        cardRiskEl.classList.add('metric-risk-low');
+      }
+
+      // Stat pills
+      const pillsEl = document.getElementById('statPills');
+      [['Total', s.total ?? 0], ['Loads', s.loads ?? 0], ['Stores', s.stores ?? 0], ['Branches', s.branches ?? 0], ['Arith', s.arithmetic ?? 0]].forEach(([k, v]) => {
+        const p = document.createElement('span');
+        p.className = 'pill';
+        p.textContent = k + ': ' + v;
+        pillsEl.appendChild(p);
+      });
+
+      // Summary
+      const ins = data.instruction_summary || [];
+      const insEl = document.getElementById('instrSummaryArea');
+      if (ins.length) {
+        insEl.innerHTML = ins.map(x => '<div style="padding:2px 0;border-bottom:1px solid rgba(99,132,255,0.05);">' + escapeHtml(x) + '</div>').join('');
+      } else {
+        insEl.textContent = 'No summary available.';
+      }
+
+      // Percentages bars
+      const pctWrap = document.getElementById('percentages');
+      const pct = data.instruction_percentages || {};
+      for (const [k, v] of Object.entries(pct)) {
+        const num = Number(v || 0);
+        pctWrap.appendChild(barRow(k, num, 100));
+      }
+
+      // Sections
+      const tbody = document.getElementById('sectionsTbody');
+      (data.sections || []).forEach(sec => {
+        const tr = document.createElement('tr');
+        const isCode = (sec.name || '').toLowerCase().includes('.text');
+        tr.innerHTML = `
+          <td class="mono">${escapeHtml(sec.name || '(unnamed)')}</td>
+          <td class="mono">${escapeHtml(String(sec.size ?? ''))}</td>
+          <td class="mono">${escapeHtml(String(sec.addr ?? ''))}</td>
+          <td>${isCode ? '<span class="section-tag">code</span>' : ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Pseudocode
+      const pseudoEl = document.getElementById('pseudocode');
+      const pseudo = data.pseudocode || [];
+      if (pseudo.length) {
+        pseudoEl.innerHTML = '';
+        pseudo.forEach(line => {
+          const div = document.createElement('div');
+          div.className = 'code-line pseudocode-item';
+          div.textContent = line;
+          pseudoEl.appendChild(div);
+        });
+      }
+
+      // Instructions
+      const instrListEl = document.getElementById('instrList');
+      const instrs = (data.instructions || []).slice(0, 50);
+      if (instrs.length) {
+        instrListEl.innerHTML = '';
+        instrs.forEach(i => {
+          const div = document.createElement('div');
+          div.className = 'code-line instr-item';
+          div.innerHTML = `<span class="code-addr">${escapeHtml(String(i.addr || ''))}</span><span class="code-mnemonic">${escapeHtml(String(i.mnemonic || i.opcode || 'inst'))}</span>${i.comment ? '<span class="code-comment">; ' + escapeHtml(i.comment) + '</span>' : ''}`;
+          instrListEl.appendChild(div);
+        });
+      }
+
+      // Heuristics
+      const riskBadgeWrap = document.getElementById('riskBadgeWrap');
+      const badgeClass = riskVal > 0.6 ? 'risk-badge-high' : riskVal > 0.4 ? 'risk-badge-med' : 'risk-badge-low';
+      const badgeLabel = riskVal > 0.6 ? '● HIGH RISK' : riskVal > 0.4 ? '◐ MEDIUM' : '○ LOW RISK';
+      riskBadgeWrap.innerHTML = `<span class="risk-badge ${badgeClass}">${badgeLabel}</span>`;
+
+      const hb = document.getElementById('heurBars');
+      [
+        ['Memory', h.memory_intensity, h.memory_intensity > 0.6 ? 'heur-high' : h.memory_intensity > 0.4 ? 'heur-med' : 'heur-low'],
+        ['Branch', h.branch_density, h.branch_density > 0.6 ? 'heur-high' : h.branch_density > 0.4 ? 'heur-med' : 'heur-low'],
+        ['Compute', h.compute_intensity, 'heur-low'],
+      ].forEach(([label, val, cls]) => {
+        hb.appendChild(barRow(label, typeof val === 'number' ? val : 0, 1, cls));
+      });
+
+      // Recommendations
+      const recs = data.recommendations || [];
+      const recsEl = document.getElementById('recs');
+      if (recs.length) {
+        recsEl.innerHTML = '';
+        recs.forEach(r => {
+          const item = document.createElement('div');
+          item.className = 'rec-item';
+          item.innerHTML = '<span class="rec-bullet">›</span><span>' + escapeHtml(String(r)) + '</span>';
+          recsEl.appendChild(item);
+        });
+      }
+
+      // Raw JSON
+      const jsonStr = JSON.stringify(data, null, 2);
+      document.getElementById('rawPre').textContent = jsonStr;
+      document.getElementById('downloadReport').href = '/api/result/' + encodeURIComponent(rid);
+
+      // Hotspot heatmap
+      const hotspots = data.instruction_hotspots || {};
+      const hotspotStats = document.getElementById('hotspotStats');
+      const hotspotContainer = document.getElementById('hotspotContainer');
+
+      if (hotspots.top_mnemonics && hotspots.top_mnemonics.length) {
+        hotspotStats.textContent = hotspots.top_mnemonics.length + ' mnemonics · ' + (hotspots.total_unique || 0) + ' unique';
+        hotspotContainer.innerHTML = '';
+        hotspots.top_mnemonics.forEach(item => {
+          const intensity = item.intensity || 0;
+          const hue = Math.max(0, 210 - intensity * 2.2);
+          const sat = 60 + intensity * 0.3;
+          const color = `hsl(${hue}, ${sat}%, 55%)`;
+          const row = document.createElement('div');
+          row.className = 'bar-row';
+          row.innerHTML = `
+            <span class="bar-label">${escapeHtml(item.mnemonic.toUpperCase())}</span>
+            <div class="bar-track" style="height:20px;">
+              <div class="bar-fill" style="width:${intensity}%;background:${color};display:flex;align-items:center;justify-content:flex-end;padding-right:8px;">
+                ${item.count > 0 ? '<span style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,0.9);">' + item.count + '</span>' : ''}
+              </div>
+            </div>
+            <span class="bar-pct">${item.percentage.toFixed(1)}%</span>
+          `;
+          hotspotContainer.appendChild(row);
+        });
+      } else {
+        hotspotStats.textContent = 'No data';
+        hotspotContainer.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No instruction hotspots available.</div>';
+      }
+
+      // CFG
+      const cfg = data.cfg || {};
+      const cfgStats = document.getElementById('cfgStats');
+      const cfgContainer = document.getElementById('cfgContainer');
+      if (cfg.entry_point && cfg.nodes && cfg.nodes.length) {
+        cfgStats.textContent = `${cfg.node_count || 0} nodes · ${cfg.edge_count || 0} edges`;
+        try {
+          let md = 'graph TD\n';
+          md += `A["Entry: ${cfg.entry_point}"];\n`;
+          const nodeMap = {};
+          (cfg.nodes || []).slice(0, 20).forEach((node, idx) => {
+            if (node && node !== cfg.entry_point) {
+              nodeMap[node] = `N${idx + 1}`;
+              md += `${nodeMap[node]}["${escapeHtml(String(node)).slice(0,12)}"];\n`;
+            }
+          });
+          (cfg.edges || []).slice(0, 30).forEach(edge => {
+            const f = nodeMap[edge.from] || 'A';
+            const t = nodeMap[edge.to] || 'A';
+            const s = edge.type === 'jump' || edge.type === 'branch' ? '-.->' : '-->';
+            md += `${f} ${s} ${t};\n`;
+          });
+          cfgContainer.innerHTML = `<div class="mermaid">${md}</div>`;
+          mermaid.init(undefined, cfgContainer.querySelector('.mermaid'));
+        } catch(e) {
+          cfgContainer.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">Error rendering CFG.</div>';
+        }
+      } else {
+        cfgStats.textContent = 'No CFG data';
+        cfgContainer.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No control flow graph available.</div>';
+      }
+
+      // Execution results
+      const exec = data.execution_results || {};
+      if (exec.instructions_executed) {
+        document.getElementById('executionCard').style.display = '';
+        document.getElementById('execStatus').textContent = 'Completed';
+
+        const summary = document.getElementById('execSummaryStats');
+        [['Instructions Executed', exec.instructions_executed],
+         ['Cycles (estimated)', exec.cycles_estimate],
+         ['IPC (est.)', (exec.ipc_estimate || 0).toFixed(3)],
+         ['Registers Modified', exec.unique_registers_written]].forEach(([k, v]) => summary.appendChild(statRow(k, v)));
+
+        const mem = exec.memory_accesses || {};
+        const memEl = document.getElementById('execMemStats');
+        [['Total Accesses', mem.total || 0],
+         ['Loads', mem.loads || 0],
+         ['Stores', mem.stores || 0],
+         ['Branch History', (exec.branches_taken || 0) + '/' + (exec.branches_total || 0) + ' taken']].forEach(([k, v]) => memEl.appendChild(statRow(k, v)));
+
+        // Instruction mix
+        const mixEl = document.getElementById('execInstrMix');
+        Object.entries(exec.instruction_mix || {}).sort((a,b)=>b[1]-a[1]).slice(0,8).forEach(([mn, count]) => {
+          mixEl.appendChild(barRow(mn.toUpperCase(), count, exec.instructions_executed || 1));
+        });
+
+        // Loops
+        const loopsEl = document.getElementById('execLoops');
+        const loops = exec.loops_detected || [];
+        if (loops.length) {
+          loops.forEach(l => {
+            const d = document.createElement('div');
+            d.style.cssText = 'display:flex;align-items:center;gap:10px;font-size:12px;';
+            d.innerHTML = `<span class="mono">${escapeHtml(l.entry)} → ${escapeHtml(l.exit)}</span><span class="pill">${l.iterations} iters</span>`;
+            loopsEl.appendChild(d);
+          });
+        } else {
+          loopsEl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No loops detected.</div>';
+        }
+
+        // Memory regions
+        const memReg = document.getElementById('execMemRegions');
+        [['Stack Usage', exec.stack_usage || 'N/A'], ['Heap Usage', exec.heap_usage || 'N/A']].forEach(([k, v]) => memReg.appendChild(statRow(k, v)));
+
+        // I/O
+        const ioEl = document.getElementById('execIO');
+        const ioOps = exec.io_operations || [];
+        ioEl.innerHTML = ioOps.length
+          ? ioOps.slice(0, 10).map(op => op.type === 'write' ? `write(${op.fd}, …, ${op.count}) → "${escapeHtml(op.data || '')}"` : `read(${op.fd}, …, ${op.count})`).join('<br>')
+          : '<span style="color:var(--text-dim);">No I/O operations.</span>';
+
+        document.getElementById('execOutput').textContent = exec.output || '(no output)';
+
+        const regEl = document.getElementById('execRegState');
+        const regs = Object.entries(exec.final_register_state || {});
+        regEl.innerHTML = regs.length
+          ? regs.map(([r, v]) => `<div>${r}: <span style="color:var(--accent);">0x${v.toString(16).padStart(16, '0')}</span></div>`).join('')
+          : '<div style="color:var(--text-muted);">No registers modified.</div>';
+      }
+
+      // Raw/links
+      document.getElementById('copyBtn').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(jsonStr); } catch(e) {}
+      });
+      document.getElementById('downloadBtn').addEventListener('click', () => {
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'report.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      });
+      document.getElementById('rawBtn').addEventListener('click', () => {
+        const el = document.getElementById('raw');
+        el.style.display = el.style.display === 'none' ? '' : 'none';
+      });
+      document.getElementById('exportHtmlBtn').addEventListener('click', () => {
+        const p = window.location.pathname.split('/').filter(Boolean);
+        const id = p[p.length - 1];
+        if (id) window.location.href = '/api/result/' + encodeURIComponent(id) + '/export';
+      });
+      document.getElementById('openRaw').addEventListener('click', e => {
+        e.preventDefault();
+        document.getElementById('raw').style.display = '';
+        document.getElementById('raw').scrollIntoView({ behavior: 'smooth' });
+      });
+
+      // Filters
+      document.getElementById('instrFilter').addEventListener('input', e => {
+        const q = e.target.value.toLowerCase();
+        document.querySelectorAll('.instr-item').forEach(el => { el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+      });
+      document.getElementById('pseudocodeFilter').addEventListener('input', e => {
+        const q = e.target.value.toLowerCase();
+        document.querySelectorAll('.pseudocode-item').forEach(el => { el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none'; });
+      });
+    }
+
+    // Execute button
+    document.getElementById('executeBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('executeBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin"></span> Running…';
+      try {
+        const p = window.location.pathname.split('/').filter(Boolean);
+        const id = p[p.length - 1];
+        const resp = await fetch('/api/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rid: id, test_input: '', args: {} })
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        location.reload();
+      } catch(err) {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg> Execute';
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
